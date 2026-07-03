@@ -22,7 +22,6 @@ export const useCustomTemplateStore = defineStore('customTemplate', {
       targetedTraining: true,
       review: true,
       speedChallenge: false,
-      workshop: false,
       cardBattle: false,
       shop: false,
       cashier: false

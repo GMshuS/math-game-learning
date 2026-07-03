@@ -14,7 +14,6 @@ const STORAGE_KEYS = {
   VERSION: 'math_game_version',
   // 新增玩法数据
   SPEED_CHALLENGE: 'math_game_speed_challenge',
-  WORKSHOP: 'math_game_workshop',
   CARD_BATTLE: 'math_game_card_battle',
   LEADERBOARD: 'math_game_leaderboard',
   NOTIFICATIONS: 'math_game_notifications',
@@ -199,7 +198,7 @@ class StorageManager {
    * @param {Object|GameProgress} progress - 游戏进度或 GameProgress 实例
    * @param {Object|Inventory} inventory - 库存或 Inventory 实例
    * @param {Object|Settings} settings - 设置或 Settings 实例
-   * @param {Object} [extraData] - 扩展数据（speedChallenge, workshop, cardBattle 等）
+   * @param {Object} [extraData] - 扩展数据（speedChallenge, cardBattle 等）
    * @returns {void}
    */
   saveGame(player, progress, inventory, settings, extraData = {}) {
@@ -211,7 +210,6 @@ class StorageManager {
     // 额外数据也使用 _safeSetItem（不抛出异常，返回 boolean）
     const extraKeys = {
       speedChallenge: STORAGE_KEYS.SPEED_CHALLENGE,
-      workshop: STORAGE_KEYS.WORKSHOP,
       cardBattle: STORAGE_KEYS.CARD_BATTLE,
       leaderboard: STORAGE_KEYS.LEADERBOARD,
       notifications: STORAGE_KEYS.NOTIFICATIONS,
@@ -261,7 +259,6 @@ class StorageManager {
     // 批量加载扩展数据（向后兼容：旧存档对应字段返回 null）
     const optionalKeys = [
       { key: 'speedChallenge', storageKey: STORAGE_KEYS.SPEED_CHALLENGE },
-      { key: 'workshop', storageKey: STORAGE_KEYS.WORKSHOP },
       { key: 'cardBattle', storageKey: STORAGE_KEYS.CARD_BATTLE },
       { key: 'leaderboard', storageKey: STORAGE_KEYS.LEADERBOARD },
       { key: 'notifications', storageKey: STORAGE_KEYS.NOTIFICATIONS },

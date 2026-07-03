@@ -83,7 +83,7 @@ const AchievementView = defineAsyncComponent(() => import('./AchievementView.vue
 const SettingsPanel = defineAsyncComponent(() => import('./SettingsPanel.vue'));
 const GameHall = defineAsyncComponent(() => import('./GameHall.vue'));
 const SpeedChallenge = defineAsyncComponent(() => import('./SpeedChallenge.vue'));
-const Workshop = defineAsyncComponent(() => import('./Workshop.vue'));
+const WordFillChallenge = defineAsyncComponent(() => import('./WordFillChallenge.vue'));
 const CardBattle = defineAsyncComponent(() => import('./CardBattle.vue'));
 const CardCollection = defineAsyncComponent(() => import('./CardCollection.vue'));
 const CardPack = defineAsyncComponent(() => import('./CardPack.vue'));
@@ -173,7 +173,7 @@ const viewTitleMap = {
   unitGame: '单位大冒险',
   chartGame: '统计图表',
   speedChallenge: '速算竞技场',
-  workshop: '数学工坊',
+  wordFill: '应用与填空',
   clock: '钟表学院',
   probability: '概率实验室',
   market: '超市大挑战',
@@ -219,7 +219,7 @@ const currentMode = computed(() => {
     return 'inventory';
   }
   if (currentView.value === 'challenge' || currentView.value === 'speedChallenge' ||
-    currentView.value === 'workshop' || currentView.value === 'cardBattle' ||
+    currentView.value === 'wordFill' || currentView.value === 'cardBattle' ||
     currentView.value === 'cardCollection' || currentView.value === 'cardPack' ||
     currentView.value === 'cardWorld' || currentView.value === 'clock' ||
     currentView.value === 'probability' || currentView.value === 'geometryGame' ||
@@ -683,10 +683,10 @@ const startSpeedChallenge = () => {
   currentView.value = 'speedChallenge';
 };
 
-// 导航到数学工坊
-const startWorkshop = () => {
+// 导航到应用与填空
+const startWordFill = () => {
   previousView.value = currentView.value;
-  currentView.value = 'workshop';
+  currentView.value = 'wordFill';
 };
 
 // 打开卡牌收藏
@@ -910,7 +910,7 @@ const viewRegistry = {
     props: () => ({}),
     events: {
       'startSpeedChallenge': startSpeedChallenge,
-      'startWorkshop': startWorkshop,
+      'startWordFill': startWordFill,
       'startMarket': startMarketFromHall,
       'startClock': startClockFromHall,
       'startProbability': startProbabilityFromHall,
@@ -956,8 +956,8 @@ const viewRegistry = {
     props: () => ({}),
     events: { 'challengeEnd': onChallengeEnd, back: goBack }
   },
-  workshop: {
-    component: Workshop,
+  wordFill: {
+    component: WordFillChallenge,
     props: () => ({}),
     events: { back: goBack }
   },

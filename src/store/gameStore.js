@@ -10,7 +10,6 @@ import { useEquipmentStore } from './equipmentStore';
 import { useSpeedChallengeStore } from './speedChallengeStore';
 import { useSaveDataStore } from './saveDataStore';
 import { useQuestionStore } from './questionStore';
-import { useWorkshopStore } from './workshopStore';
 import { useCardStore } from './cardStore';
 import { useInventoryStore } from './inventoryStore';
 import { useEnglishSpeedSpellStore } from './englishSpeedSpellStore';
@@ -32,7 +31,6 @@ export const useGameStore = defineStore('game', {
     playerStars: 0, // 星星
     // 新玩法数据
     speedChallenge: null,
-    workshop: null,
     cardBattle: null,
     leaderboard: null,
     notifications: [],
@@ -96,7 +94,6 @@ export const useGameStore = defineStore('game', {
         
         // 加载新玩法数据（向后兼容）
         this.speedChallenge = gameData.speedChallenge || this.getDefaultSpeedChallenge();
-        this.workshop = gameData.workshop || this.getDefaultWorkshop();
         this.cardBattle = gameData.cardBattle || this.getDefaultCardBattle();
         this.leaderboard = gameData.leaderboard || this.getDefaultLeaderboard();
         this.notifications = gameData.notifications || [];
@@ -125,7 +122,6 @@ export const useGameStore = defineStore('game', {
       this.playerGems = 0;
       this.playerStars = 0;
       this.speedChallenge = this.getDefaultSpeedChallenge();
-      this.workshop = this.getDefaultWorkshop();
       this.cardBattle = this.getDefaultCardBattle();
       this.leaderboard = this.getDefaultLeaderboard();
       this.notifications = [];
@@ -156,7 +152,6 @@ export const useGameStore = defineStore('game', {
       useSpeedChallengeStore().$reset();
       useSaveDataStore().$reset();
       useQuestionStore().$reset();
-      useWorkshopStore().$reset();
       useCardStore().$reset();
       useInventoryStore().$reset();
       useEnglishSpeedSpellStore().$reset();
@@ -349,17 +344,6 @@ export const useGameStore = defineStore('game', {
     },
 
     /**
-     * 获取默认工坊数据
-     */
-    getDefaultWorkshop() {
-      return {
-        materials: {}, // { materialId: quantity }
-        craftedItems: [], // { itemId, quantity, listedAt, price }
-        listedItems: [] // { itemId, price, listedAt, sold }
-      };
-    },
-
-    /**
      * 获取默认卡牌数据
      */
     getDefaultCardBattle() {
@@ -413,7 +397,6 @@ export const useGameStore = defineStore('game', {
           this.settings,
           {
             speedChallenge: this.speedChallenge,
-            workshop: this.workshop,
             cardBattle: this.cardBattle,
             leaderboard: this.leaderboard,
             notifications: this.notifications,

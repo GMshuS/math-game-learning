@@ -49,7 +49,7 @@ export const useNotificationStore = defineStore('notification', {
     addNotification({ type, title, message }) {
       const notification = {
         id: Date.now().toString() + Math.random().toString(36).slice(2),
-        type, // 'workshop', 'card', 'achievement', 'error', 'success', 'info'
+        type, // 'card', 'achievement', 'error', 'success', 'info'
         title,
         message,
         read: false,

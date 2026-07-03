@@ -635,7 +635,6 @@ const strategyModes = [
   { id: 'targetedTraining', label: '针对性训练', icon: '🎯' },
   { id: 'review', label: '复习模式', icon: '📖' },
   { id: 'speedChallenge', label: '速算竞技场', icon: '⚡' },
-  { id: 'workshop', label: '数学工坊', icon: '🔧' },
   { id: 'cardBattle', label: '卡牌对战', icon: '🃏' },
   { id: 'shop', label: '经营商店', icon: '🏪' },
   { id: 'cashier', label: '收银台', icon: '💰' }
