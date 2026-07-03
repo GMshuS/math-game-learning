@@ -9,6 +9,7 @@
         </p>
       </div>
       <div class="header-actions">
+        <button class="btn-knowledge" @click="$emit('startKnowledgeCenter')">📚 知识中心</button>
         <button class="btn-leaderboard" @click="$emit('openLeaderboard')">🏆 排行榜</button>
         <button class="btn-achievements" @click="$emit('openAchievements')">🏅 成就</button>
         <button class="btn-back" @click="$emit('back')">← 返回</button>
@@ -71,6 +72,26 @@
       </div>
     </div>
 
+    <!-- 针对性训练卡片 -->
+    <div class="training-entrance" @click="$emit('startTargetedTraining')">
+      <div class="entrance-icon">🎯</div>
+      <h3>针对性训练</h3>
+      <p>根据错题记录，自动推荐薄弱题型</p>
+      <div class="entrance-stats knowledge-stats">
+        {{ weakNodeText }}
+      </div>
+    </div>
+
+    <!-- 复习模式卡片 -->
+    <div class="review-entrance" @click="$emit('startReview')">
+      <div class="entrance-icon">📚</div>
+      <h3>复习模式</h3>
+      <p>基于遗忘曲线，智能安排复习</p>
+      <div class="entrance-stats knowledge-stats">
+        {{ dueText }}
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -78,14 +99,19 @@
 import { computed } from 'vue';
 import { useSettingsStore } from '../store/settingsStore';
 import { useGameStore } from '../store/gameStore';
+import { useEnglishKnowledgeStore } from '../store/englishKnowledgeStore';
 import { speedSpellConfig } from '../config/english/speedSpell';
 import { englishGradesConfig } from '../config/english/grades';
 import { grammarTowers } from '../config/english/grammar';
+import { englishKnowledgeNodes } from '../config/knowledge';
 import { useEnglishSpiritStore } from '../store/englishSpiritStore';
 import { useEnglishAdventureStore } from '../store/englishAdventureStore';
 import { getAllEnglishRegions } from '../config/english/adventure';
+import { getDueCount } from '../utils/spacedRepetition';
 
-defineEmits(['startSpeedSpell', 'back', 'enterGrammar', 'startAdventure', 'openLeaderboard', 'openAchievements']);
+const emit = defineEmits(['startSpeedSpell', 'back', 'enterGrammar', 'startAdventure',
+  'openLeaderboard', 'openAchievements', 'startTargetedTraining', 'startReview',
+  'startKnowledgeCenter']);
 
 const settingsStore = useSettingsStore();
 const gameStore = useGameStore();
@@ -126,6 +152,32 @@ const maxStars = computed(() => {
 });
 
 const grammarKeys = computed(() => gameStore.grammarProgress?.totalKeys || 0);
+
+// ====== 知识学习统计（英语） ======
+const englishKnowledgeStore = useEnglishKnowledgeStore();
+
+const weakNodeCount = computed(() => {
+  const records = englishKnowledgeStore.records;
+  return Object.values(records).filter(r =>
+    r.totalAttempts > 0 && (r.wrongCount / r.totalAttempts) > 0.3
+  ).length;
+});
+
+const dueCount = computed(() => {
+  return getDueCount(englishKnowledgeStore.records);
+});
+
+const weakNodeText = computed(() => {
+  return weakNodeCount.value > 0
+    ? `待强化: ${weakNodeCount.value} 个知识点`
+    : '暂无薄弱点';
+});
+
+const dueText = computed(() => {
+  return dueCount.value > 0
+    ? `${dueCount.value} 个知识点待复习`
+    : '暂无待复习内容';
+});
 
 // ====== 冒险模式 ======
 const adventureStore = useEnglishAdventureStore();
@@ -196,6 +248,24 @@ const currentRegionName = computed(() => {
 .btn-leaderboard:hover {
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(251, 191, 36, 0.4);
+}
+
+.btn-knowledge {
+  padding: 0.5rem 1.2rem;
+  background: linear-gradient(135deg, #34d399, #10b981);
+  border: none;
+  border-radius: 20px;
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.btn-knowledge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(52, 211, 153, 0.4);
 }
 
 .btn-achievements {
@@ -385,6 +455,70 @@ const currentRegionName = computed(() => {
   margin-top: 0.8rem;
   font-size: 0.85rem;
   color: #ffd700;
+}
+
+.entrance-stats.knowledge-stats {
+  color: #34d399;
+}
+
+/* 针对性训练卡片 */
+.training-entrance {
+  margin-top: 2rem;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(251, 191, 36, 0.15));
+  border-radius: 15px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 2px solid rgba(245, 158, 11, 0.3);
+}
+
+.training-entrance:hover {
+  transform: translateY(-3px);
+  border-color: #f59e0b;
+  box-shadow: 0 8px 25px rgba(245, 158, 11, 0.25);
+}
+
+.training-entrance h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  color: #fbbf24;
+}
+
+.training-entrance p {
+  margin: 0;
+  opacity: 0.8;
+  font-size: 0.9rem;
+}
+
+/* 复习模式卡片 */
+.review-entrance {
+  margin-top: 2rem;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(167, 120, 255, 0.15));
+  border-radius: 15px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 2px solid rgba(139, 92, 246, 0.3);
+}
+
+.review-entrance:hover {
+  transform: translateY(-3px);
+  border-color: #8b5cf6;
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.25);
+}
+
+.review-entrance h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.2rem;
+  color: #c4b5fd;
+}
+
+.review-entrance p {
+  margin: 0;
+  opacity: 0.8;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 768px) {

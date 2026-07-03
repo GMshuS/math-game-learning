@@ -107,6 +107,7 @@ const ProbabilityLab = defineAsyncComponent(() => import('./ProbabilityLab.vue')
 const GeometryGame = defineAsyncComponent(() => import('./GeometryGame.vue'));
 const UnitGame = defineAsyncComponent(() => import('./UnitGame.vue'));
 const ChartGame = defineAsyncComponent(() => import('./ChartGame.vue'));
+const KnowledgeCenter = defineAsyncComponent(() => import('./KnowledgeCenter.vue'));
 
 const gameStore = useGameStore();
 const audioStore = useAudioStore();
@@ -773,14 +774,39 @@ const startEnglishRegionBattle = (regionId) => {
   currentView.value = 'englishRegionBattle';
 };
 
+// 当前学科（用于对 subject prop 的视图传递）
+const currentSubject = ref('math');
+
 const startTargetedTraining = () => {
   previousView.value = currentView.value;
+  currentSubject.value = 'math';
   currentView.value = 'targetedTraining';
 };
 
 const startReview = () => {
   previousView.value = currentView.value;
+  currentSubject.value = 'all';
   currentView.value = 'review';
+};
+
+// 从英语大厅进入针对性训练（带 subject='english'）
+const startTargetedTrainingFromEnglish = () => {
+  previousView.value = currentView.value;
+  currentSubject.value = 'english';
+  currentView.value = 'targetedTraining';
+};
+
+// 从英语大厅进入复习模式（带 subject='english'）
+const startReviewFromEnglish = () => {
+  previousView.value = currentView.value;
+  currentSubject.value = 'english';
+  currentView.value = 'review';
+};
+
+// 知识中心
+const startKnowledgeCenter = () => {
+  previousView.value = currentView.value;
+  currentView.value = 'knowledgeCenter';
 };
 
 const startAdmin = () => {
@@ -894,6 +920,7 @@ const viewRegistry = {
       'startGeometryGame': startGeometryFromHall,
       'startUnitGame': startUnitFromHall,
       'startChartGame': startChartFromHall,
+      'startKnowledgeCenter': startKnowledgeCenter,
       'openLeaderboard': openLeaderboard,
       'openAchievements': openAchievements,
       back: goBack
@@ -971,6 +998,9 @@ const viewRegistry = {
       'startSpeedSpell': startEnglishSpeedSpell,
       'enterGrammar': startGrammarHall,
       'startAdventure': startEnglishAdventure,
+      'startTargetedTraining': startTargetedTrainingFromEnglish,
+      'startReview': startReviewFromEnglish,
+      'startKnowledgeCenter': startKnowledgeCenter,
       'openAchievements': openAchievements,
       'openLeaderboard': openLeaderboard,
       back: goBack
@@ -1003,12 +1033,23 @@ const viewRegistry = {
   },
   targetedTraining: {
     component: TargetedTraining,
-    props: () => ({}),
+    props: () => ({
+      subject: currentSubject.value
+    }),
     events: { back: goBack }
   },
   review: {
     component: ReviewSession,
-    props: () => ({}),
+    props: () => ({
+      subject: currentSubject.value
+    }),
+    events: { back: goBack }
+  },
+  knowledgeCenter: {
+    component: KnowledgeCenter,
+    props: () => ({
+      subject: currentSubject.value
+    }),
     events: { back: goBack }
   },
   admin: {

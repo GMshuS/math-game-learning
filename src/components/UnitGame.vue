@@ -98,6 +98,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useSettingsStore } from '../store/settingsStore';
+import { useMathKnowledgeStore } from '../store/mathKnowledgeStore';
 import {
   unitCategories,
   getCategoryIds,
@@ -107,6 +108,16 @@ import {
 defineEmits(['back']);
 
 const settingsStore = useSettingsStore();
+
+// 大类 → 知识点 id 映射
+const categoryToKnowledgeId = {
+  length: 'unit_length',
+  mass: 'unit_mass',
+  time: 'unit_time',
+  area: 'unit_area',
+  volume: 'unit_volume',
+  currency: 'unit_currency'
+};
 
 // 状态
 const gameStarted = ref(false);
@@ -180,13 +191,19 @@ function selectAnswer(choice) {
   selectedAnswer.value = choice;
   totalQuestions.value++;
 
-  if (choice === currentQuestion.value.answer) {
+  const correct = choice === currentQuestion.value.answer;
+  if (correct) {
     isCorrect.value = true;
     correctAnswers.value++;
     score.value += 10;
   } else {
     isCorrect.value = false;
   }
+
+  // 记录知识点答题结果
+  const mathKnowledgeStore = useMathKnowledgeStore();
+  const knowledgeId = categoryToKnowledgeId[currentQuestion.value.categoryId] || 'unit_length';
+  mathKnowledgeStore.recordResult(knowledgeId, correct);
 }
 
 function nextQuestion() {

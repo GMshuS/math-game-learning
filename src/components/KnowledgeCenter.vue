@@ -36,9 +36,16 @@
 import { ref, computed } from 'vue';
 import { subjects } from '../config/knowledge';
 
-defineEmits(['back']);
+const props = defineProps({
+  subject: {
+    type: String,
+    default: 'math'
+  }
+});
 
-const currentSubject = ref('math');
+const emit = defineEmits(['back']);
+
+const currentSubject = ref(props.subject);
 
 const subjectsList = computed(() => {
   return Object.values(subjects);

@@ -5,6 +5,7 @@
  * subjects 注册表设计：未来新增学科只需在 subjects 对象中添加一项。
  */
 const mathKnowledgeNodes = [
+  // 基础运算（21 个原有节点）
   { id: 'add', label: '加法', icon: '➕', gradeRange: [1, 6] },
   { id: 'subtract', label: '减法', icon: '➖', gradeRange: [1, 6] },
   { id: 'multiply', label: '乘法', icon: '✖️', gradeRange: [2, 6] },
@@ -25,7 +26,36 @@ const mathKnowledgeNodes = [
   { id: 'operationLaw', label: '运算定律', icon: '📐', gradeRange: [4, 6] },
   { id: 'patternFind', label: '找规律', icon: '🔍', gradeRange: [1, 6] },
   { id: 'placeValue', label: '数位认知', icon: '🔢', gradeRange: [1, 4] },
-  { id: 'ratioProportion', label: '比和比例', icon: '📏', gradeRange: [5, 6] }
+  { id: 'ratioProportion', label: '比和比例', icon: '📏', gradeRange: [5, 6] },
+
+  // === 单位换算类（6 个新增节点） ===
+  { id: 'unit_length', label: '长度单位', icon: '📏', gradeRange: [2, 6] },
+  { id: 'unit_mass', label: '重量单位', icon: '⚖️', gradeRange: [2, 6] },
+  { id: 'unit_volume', label: '体积单位', icon: '🧊', gradeRange: [3, 6] },
+  { id: 'unit_time', label: '时间单位', icon: '⏱️', gradeRange: [1, 6] },
+  { id: 'unit_area', label: '面积单位', icon: '📐', gradeRange: [3, 6] },
+  { id: 'unit_currency', label: '货币单位', icon: '💰', gradeRange: [2, 6] },
+
+  // === 几何类（7 个新增节点） ===
+  { id: 'geometry_shape', label: '图形认知', icon: '🔷', gradeRange: [1, 6] },
+  { id: 'geometry_perimeter', label: '周长计算', icon: '📏', gradeRange: [3, 6] },
+  { id: 'geometry_area', label: '面积计算', icon: '📐', gradeRange: [3, 6] },
+  { id: 'geometry_volume', label: '体积计算', icon: '📦', gradeRange: [5, 6] },
+  { id: 'geometry_surface', label: '表面积计算', icon: '📦', gradeRange: [5, 6] },
+  { id: 'geometry_angle', label: '角度认识', icon: '📐', gradeRange: [4, 6] },
+  { id: 'geometry_circle', label: '圆的认识', icon: '⭕', gradeRange: [5, 6] },
+  { id: 'geometry_transform', label: '图形变换', icon: '🔄', gradeRange: [4, 6] },
+
+  // === 统计图表类（3 个新增节点） ===
+  { id: 'chart_bar', label: '条形统计图', icon: '📊', gradeRange: [3, 6] },
+  { id: 'chart_line', label: '折线统计图', icon: '📈', gradeRange: [4, 6] },
+  { id: 'chart_pie', label: '扇形统计图', icon: '🥧', gradeRange: [5, 6] },
+
+  // === 概率类（4 个新增节点） ===
+  { id: 'probability_basic', label: '概率基础', icon: '🎲', gradeRange: [3, 6] },
+  { id: 'probability_compare', label: '概率比较', icon: '⚖️', gradeRange: [4, 6] },
+  { id: 'probability_calc', label: '概率计算', icon: '🧮', gradeRange: [5, 6] },
+  { id: 'probability_event', label: '事件分类', icon: '📋', gradeRange: [3, 6] }
 ];
 
 const englishKnowledgeNodes = [

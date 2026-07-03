@@ -133,6 +133,7 @@
 import { ref, computed, onUnmounted, watch } from 'vue';
 import Phaser from 'phaser';
 import { useSettingsStore } from '../store/settingsStore';
+import { useMathKnowledgeStore } from '../store/mathKnowledgeStore';
 import ProbabilityScene from '../scenes/ProbabilityScene';
 import {
   getAllExperiments,
@@ -144,6 +145,14 @@ import {
 defineEmits(['back']);
 
 const settingsStore = useSettingsStore();
+
+// 实验 → 知识点 id 映射
+const experimentToKnowledgeId = {
+  coin: 'probability_basic',
+  dice: 'probability_calc',
+  ball: 'probability_compare',
+  spinner: 'probability_basic'
+};
 
 // ====== 状态变量 ======
 const phase = ref('setup');           // 'setup' | 'simulating'
@@ -290,6 +299,11 @@ function onSimulationComplete(result) {
   if (result && result.stats) {
     simulationStats.value = result.stats;
   }
+
+  // 记录知识点：概率实验不涉及对错，记录为"正确"（完成一次学习活动）
+  const mathKnowledgeStore = useMathKnowledgeStore();
+  const knowledgeId = experimentToKnowledgeId[selectedExperiment.value] || 'probability_basic';
+  mathKnowledgeStore.recordResult(knowledgeId, true);
 }
 
 /**

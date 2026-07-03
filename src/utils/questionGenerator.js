@@ -38,6 +38,11 @@ import generateAverageCalc from '../questions/averageCalc';
 import generateNegativeNumber from '../questions/negativeNumber';
 import generateRatioProportion from '../questions/ratioProportion';
 
+// 单位换算 & 图表读图题 & 几何题生成器（side-effect import：模块内自注册）
+import '../questions/unit';
+import '../questions/chart';
+import '../questions/geometry';
+
 // 显式注册所有题型，确保 tree-shaking 安全
 register('add', generateAddition);
 register('subtract', generateSubtraction);

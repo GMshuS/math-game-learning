@@ -75,7 +75,16 @@
       </div>
 
       <!-- 当前题目 -->
-      <div v-if="questionStore.currentQuestion" class="tt-question">
+      <!-- 英语题目使用 EnglishQuestionRenderer 渲染 -->
+      <div v-if="questionStore.currentQuestion && isEnglish" class="tt-question">
+        <EnglishQuestionRenderer
+          :question="questionStore.currentQuestion"
+          :disabled="questionStore.isAnswered"
+          @answer="submitEnglishAnswer"
+        />
+      </div>
+      <!-- 数学题目使用纯选择题按钮网格 -->
+      <div v-else-if="questionStore.currentQuestion" class="tt-question">
         <p class="q-text">{{ questionStore.currentQuestion.question }}</p>
         <div class="q-options">
           <button
@@ -161,14 +170,32 @@
 import { ref, computed, onUnmounted } from 'vue';
 import { useCardStore } from '../store/cardStore';
 import { useMathKnowledgeStore } from '../store/mathKnowledgeStore';
+import { useEnglishKnowledgeStore } from '../store/englishKnowledgeStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useQuestionStore } from '../store/questionStore';
-import { mathKnowledgeNodes } from '../config/knowledge';
+import { mathKnowledgeNodes, englishKnowledgeNodes } from '../config/knowledge';
 import { gradeQuestionWeights } from '../config/gradeQuestionWeights';
+import EnglishQuestionRenderer from './EnglishQuestionRenderer.vue';
+
+const props = defineProps({
+  subject: {
+    type: String,
+    default: 'math'
+  }
+});
 
 const emit = defineEmits(['back']);
 
-const mathKnowledgeStore = useMathKnowledgeStore();
+const isEnglish = computed(() => props.subject === 'english');
+
+const knowledgeStore = computed(() => {
+  return isEnglish.value ? useEnglishKnowledgeStore() : useMathKnowledgeStore();
+});
+
+const knowledgeNodes = computed(() => {
+  return isEnglish.value ? englishKnowledgeNodes : mathKnowledgeNodes;
+});
+
 const settingsStore = useSettingsStore();
 const questionStore = useQuestionStore();
 
@@ -180,8 +207,8 @@ const trainingTypes = ref([]);
 
 // 计算薄弱知识点（错误率 > 30% 且有答题记录）
 const weakNodes = computed(() => {
-  const records = mathKnowledgeStore.records;
-  return mathKnowledgeNodes.filter(node => {
+  const records = knowledgeStore.value.records;
+  return knowledgeNodes.value.filter(node => {
     const rec = records[node.id];
     if (!rec || rec.totalAttempts === 0) return false;
     return (rec.wrongCount / rec.totalAttempts) > 0.3;
@@ -206,32 +233,103 @@ function toggleNode(id) {
   selectedNodes.value = set;
 }
 
-function startTraining() {
+async function startTraining() {
   const types = Array.from(selectedNodes.value);
-  // 过滤：只保留当前年级有权重配置的题型
-  const gradeWeights = gradeQuestionWeights[settingsStore.gradeRange.max] || {};
-  const validTypes = types.filter(t => gradeWeights[t] !== undefined);
-  if (validTypes.length === 0) {
-    // 全无权重时保留原始选择
-    trainingTypes.value = types;
-  } else {
-    trainingTypes.value = validTypes;
-  }
 
-  questionStore.generateQuestionSet(settingsStore.gradeRange.max, trainingCount.value, {
-    types: trainingTypes.value
-  });
-  phase.value = 'answering';
+  if (isEnglish.value) {
+    // 英语训练 — 使用英语题目生成器
+    trainingTypes.value = types;
+    try {
+      const { generateQuestionSet } = await import('../utils/englishQuestionGenerator');
+      const questions = generateQuestionSet(trainingCount.value, {
+        types: types,
+        level: settingsStore.getEffectiveEnglishLevel || 1
+      });
+      if (questions.length === 0) {
+        alert('暂无可用英语题目生成器，请先完成语法生成器配置。');
+        return;
+      }
+      // 存入本地状态用于答题阶段（T2.2 将替换为 EnglishQuestionRenderer）
+      questionStore.questionSet = questions;
+      questionStore.currentIndex = 0;
+      questionStore.currentQuestion = questions[0];
+      questionStore.answeredQuestions = [];
+      questionStore.correctCount = 0;
+      questionStore.wrongCount = 0;
+      questionStore.streak = 0;
+      questionStore.isAnswered = false;
+      questionStore.lastAnswer = null;
+      questionStore.isCorrect = null;
+    } catch (e) {
+      alert('英语题目生成器加载失败，请稍后再试。');
+      return;
+    }
+    phase.value = 'answering';
+  } else {
+    // 数学训练 — 使用数学题目生成器
+    const gradeWeights = gradeQuestionWeights[settingsStore.gradeRange.max] || {};
+    const validTypes = types.filter(t => gradeWeights[t] !== undefined);
+    if (validTypes.length === 0) {
+      trainingTypes.value = types;
+    } else {
+      trainingTypes.value = validTypes;
+    }
+
+    questionStore.generateQuestionSet(settingsStore.gradeRange.max, trainingCount.value, {
+      types: trainingTypes.value
+    });
+    phase.value = 'answering';
+  }
 }
 
 function submitAnswer(answer) {
-  questionStore.submitAnswer(answer);
+  if (isEnglish.value) {
+    // 英语题目 — 本地判题 + 记录到英语知识库
+    if (!questionStore.currentQuestion || questionStore.isAnswered) return;
+    const q = questionStore.currentQuestion;
+    const correct = answer === q.answer;
+    questionStore.isAnswered = true;
+    questionStore.lastAnswer = answer;
+    questionStore.isCorrect = correct;
+    if (correct) {
+      questionStore.correctCount++;
+      questionStore.streak++;
+      if (questionStore.streak > questionStore.bestStreak) {
+        questionStore.bestStreak = questionStore.streak;
+      }
+    } else {
+      questionStore.wrongCount++;
+      questionStore.streak = 0;
+    }
+    questionStore.answeredQuestions.push({
+      question: q,
+      userAnswer: answer,
+      correct: correct,
+      correctAnswer: q.answer
+    });
+    // 记录到英语知识库
+    const knowledgeId = q.knowledgeId || q.type;
+    if (knowledgeId) {
+      knowledgeStore.value.recordResult(knowledgeId, correct);
+    }
+  } else {
+    // 数学题目 — 委托 questionStore
+    questionStore.submitAnswer(answer);
 
-  // 卡牌碎片产出：连续答对 5 题得 1 碎片
-  if (questionStore.isCorrect && questionStore.streak > 0 && questionStore.streak % 5 === 0) {
-    const cardStore = useCardStore();
-    cardStore.earnShard('math', 1);
+    // 卡牌碎片产出：连续答对 5 题得 1 碎片
+    if (questionStore.isCorrect && questionStore.streak > 0 && questionStore.streak % 5 === 0) {
+      const cardStore = useCardStore();
+      cardStore.earnShard('math', 1);
+    }
   }
+}
+
+/**
+ * EnglishQuestionRenderer 的 @answer 事件处理
+ * 复用 submitAnswer 中英语题目的判题逻辑
+ */
+function submitEnglishAnswer(answer) {
+  submitAnswer(answer);
 }
 
 function nextQuestion() {

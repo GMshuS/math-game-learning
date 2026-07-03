@@ -236,6 +236,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useSettingsStore } from '../store/settingsStore';
+import { useMathKnowledgeStore } from '../store/mathKnowledgeStore';
 import { generateChart } from '../config/charts';
 
 defineEmits(['back']);
@@ -382,6 +383,17 @@ function pieSlicePath(idx) {
   return `M 0 0 L ${x1} ${y1} A ${pieRadius} ${pieRadius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
 }
 
+// 根据图表类型获取知识点 id
+function getChartKnowledgeId() {
+  const type = chartData.value?.type || chartType.value;
+  switch (type) {
+    case 'bar': return 'chart_bar';
+    case 'line': return 'chart_line';
+    case 'pie': return 'chart_pie';
+    default: return 'chart_bar';
+  }
+}
+
 // 游戏方法
 function startGame() {
   const result = generateChart(settingsStore.gradeRange.max, chartType.value || null);
@@ -402,13 +414,19 @@ function selectAnswer(choice) {
   answered.value = true;
   selectedAnswer.value = choice;
 
-  if (choice === currentQuestion.value.answer) {
+  const correct = choice === currentQuestion.value.answer;
+  if (correct) {
     isCorrect.value = true;
     correctCount.value++;
     score.value += 10;
   } else {
     isCorrect.value = false;
   }
+
+  // 记录知识点答题结果
+  const mathKnowledgeStore = useMathKnowledgeStore();
+  const knowledgeId = getChartKnowledgeId();
+  mathKnowledgeStore.recordResult(knowledgeId, correct);
 }
 
 function nextQuestion() {

@@ -9,6 +9,7 @@ import { defineStore } from 'pinia';
 import { useGameStore } from './gameStore';
 import { useEnglishKnowledgeStore } from './englishKnowledgeStore';
 import { getTowerById, getFloorByNumber } from '../config/english/grammar';
+import { generateQuestion as generateEnglishQuestion } from '../utils/englishQuestionGenerator';
 
 export const useEnglishGrammarStore = defineStore('englishGrammar', {
   state: () => ({
@@ -108,6 +109,140 @@ export const useEnglishGrammarStore = defineStore('englishGrammar', {
     },
 
     /**
+     * 动态生成题目（动态生成器优先，回退 grammar.js 静态题库）
+     *
+     * 对于 choice/fillBlank 类型楼层（1-6层）：调用 englishQuestionGenerator
+     * 对于其他类型楼层（dragOrder/bossFight/特殊题型）：直接回退静态题库
+     *
+     * @param {object} floorData 楼层数据
+     * @returns {Array<object>} 题目数组
+     */
+    /**
+     * 将动态生成器输出的题目标准化为组件期望的格式
+     * 动态生成器输出：{ question, answer, options, type, knowledgeId }
+     * 组件期望：{ sentence, blanks, answer, options, type, ... }
+     * @param {object} q 动态生成的原始题目
+     * @param {string} floorType 楼层类型
+     * @param {number} index 题目索引
+     * @param {boolean} isBoss 是否为BOSS楼层
+     * @returns {object} 标准化后的题目
+     */
+    _normalizeDynamicQuestion(q, floorType, index, isBoss) {
+      const normalized = {
+        ...q,
+        _index: index,
+        type: floorType,
+        isBossFloor: isBoss,
+        // 动态生成器用 `question` 字段，组件用 `sentence` 字段
+        sentence: q.question || q.sentence || '',
+        // 组件需要 blanks 数组用于渲染填空题下划线
+        blanks: q.blanks || (floorType === 'fillBlank' ? ['___'] : []),
+        // BOSS战需要 wrongSentence 字段
+        wrongSentence: q.wrongSentence || '',
+        // 确保有 voicePrompt
+        voicePrompt: q.voicePrompt || q.question || q.sentence || ''
+      };
+      // 保留 question 字段作为向后兼容
+      normalized.question = normalized.sentence;
+      return normalized;
+    },
+
+    _generateQuestions(floorData) {
+      if (!floorData || !this.currentTower) return [];
+
+      const towerId = this.currentTower;
+      const isChoiceOrFillBlank = floorData.type === 'choice' || floorData.type === 'fillBlank';
+
+      // 动态生成器支持的知识点类型列表
+      const dynamicSupportedTypes = [
+        'beVerb', 'presentSimple', 'presentContinuous', 'noun',
+        'thereBe', 'article', 'pastTense', 'futureTense',
+        'pronoun', 'questionForm', 'adjAdv', 'comparative',
+        'preposition', 'conjunction', 'sentenceStructure', 'basicClause'
+      ];
+
+      if (isChoiceOrFillBlank) {
+        // 动态生成器优先（楼层 1-6）
+        const knowledgeType = this._towerIdToKnowledgeType(towerId);
+        if (knowledgeType && dynamicSupportedTypes.includes(knowledgeType)) {
+          const generatedQuestions = [];
+          // 尝试生成 floorData.questions.length 个题目，默认 5 题
+          const targetCount = floorData.questions.length || 5;
+          for (let i = 0; i < targetCount; i++) {
+            // level 根据楼层号调整: 楼层越高 level 越高
+            const level = Math.min(Math.max(1, Math.floor(floorData.floor / 2) + 1), 6);
+            const q = generateEnglishQuestion(knowledgeType, level);
+            if (q) {
+              generatedQuestions.push(
+                this._normalizeDynamicQuestion(q, floorData.type, i, false)
+              );
+            }
+          }
+          // 若成功生成了至少 1 题，返回生成的题目
+          if (generatedQuestions.length > 0) {
+            return generatedQuestions;
+          }
+        }
+      }
+
+      // BOSS战楼层（楼层 8）：尝试用动态生成器产生 choice 题作为 bossFight 备选
+      if (floorData.type === 'bossFight') {
+        const knowledgeType = this._towerIdToKnowledgeType(towerId);
+        if (knowledgeType && dynamicSupportedTypes.includes(knowledgeType)) {
+          const generatedQuestions = [];
+          const targetCount = floorData.questions.length || 5;
+          for (let i = 0; i < targetCount; i++) {
+            const level = Math.min(Math.max(3, floorData.floor), 6);
+            const q = generateEnglishQuestion(knowledgeType, level);
+            if (q) {
+              generatedQuestions.push(
+                this._normalizeDynamicQuestion(q, floorData.type, i, true)
+              );
+            }
+          }
+          if (generatedQuestions.length > 0) {
+            return generatedQuestions;
+          }
+        }
+      }
+
+      // 回退：使用 grammar.js 静态题库中的保留题
+      return floorData.questions.map((q, index) => ({
+        ...q,
+        _index: index,
+        type: floorData.type,
+        isBossFloor: floorData.type === 'bossFight'
+      }));
+    },
+
+    /**
+     * 将塔 ID 映射为动态生成器的知识类型
+     * @param {string} towerId
+     * @returns {string|null}
+     */
+    _towerIdToKnowledgeType(towerId) {
+      const mapping = {
+        'be-verb': 'beVerb',
+        'presentSimple': 'presentSimple',
+        'presentContinuous': 'presentContinuous',
+        'noun': 'noun',
+        'thereBe': 'thereBe',
+        'article': 'article',
+        'pastTense': 'pastTense',
+        'futureTense': 'futureTense',
+        'pronoun': 'pronoun',
+        'questionForm': 'questionForm',
+        'comparative': 'comparative',
+        'preposition': 'preposition',
+        'conjunction': 'conjunction',
+        'basicClause': 'basicClause',
+        'phrase': null,
+        'dialogue': null
+      };
+      return mapping[towerId] || null;
+    },
+
+    /**
      * 开始指定楼层
      * 加载该层题目，重置楼层相关状态
      * @param {number} floorNumber 楼层号 (1-8)
@@ -130,13 +265,8 @@ export const useEnglishGrammarStore = defineStore('englishGrammar', {
       this.bossHp = 3;
       this.bossConsecutiveCorrect = 0;
 
-      // 加载题目，注入楼层类型信息
-      this.floorQuestions = floorData.questions.map((q, index) => ({
-        ...q,
-        _index: index,
-        type: floorData.type,
-        isBossFloor: floorData.type === 'bossFight'
-      }));
+      // 动态出题：动态生成器优先 → 回退 grammar.js 静态
+      this.floorQuestions = this._generateQuestions(floorData);
 
       // BOSS层使用配置的HP
       if (floorData.type === 'bossFight' && floorData.boss) {
@@ -224,7 +354,7 @@ export const useEnglishGrammarStore = defineStore('englishGrammar', {
 
       // ---- 记录到错题本 ----
       const knowledgeStore = useEnglishKnowledgeStore();
-      const nodeId = `${this.currentTower}_floor${this.currentFloor}_q${this.currentQuestionIndex}`;
+      const nodeId = question.knowledgeId || this._towerIdToKnowledgeType(this.currentTower) || `${this.currentTower}_floor${this.currentFloor}`;
       knowledgeStore.recordResult(nodeId, isCorrect);
 
       // ---- 检查该层是否结束 ----
@@ -432,6 +562,17 @@ export const useEnglishGrammarStore = defineStore('englishGrammar', {
     completeTutorial() {
       this.gamePhase = 'playing';
       this.startFloor(1);
+    },
+
+    /**
+     * 生成动态题目（公开接口）
+     * 供外部组件或调试使用，直接调用英语生成器
+     * @param {string} topic 知识点类型（如 'beVerb', 'noun'）
+     * @param {number} level 难度等级 (1-6)
+     * @returns {object|null} 题目对象
+     */
+    generateDynamicQuestion(topic, level = 1) {
+      return generateEnglishQuestion(topic, level);
     },
 
     /**

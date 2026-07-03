@@ -79,11 +79,24 @@ import { ref, onUnmounted } from 'vue';
 import Phaser from 'phaser';
 import { useCardStore } from '../store/cardStore';
 import { useSettingsStore } from '../store/settingsStore';
+import { useMathKnowledgeStore } from '../store/mathKnowledgeStore';
 import GeometryScene from '../scenes/GeometryScene';
 
 const emit = defineEmits(['back']);
 
 const settingsStore = useSettingsStore();
+
+// 模式 → 知识点 id 映射
+const modeToKnowledgeId = {
+  identify: 'geometry_shape',
+  angles: 'geometry_angle',
+  triangle: 'geometry_shape',
+  area: 'geometry_area',
+  transform: 'geometry_transform',
+  solid: 'geometry_volume',
+  circle: 'geometry_circle',
+  views: 'geometry_shape'
+};
 
 // 模式定义
 const modes = [
@@ -169,6 +182,16 @@ function handleGameComplete(result) {
     correctCount: gameCorrect.value,
     total: gameTotal.value
   };
+
+  // 记录知识点：将每道题的答题结果写入 mathKnowledgeStore
+  const mathKnowledgeStore = useMathKnowledgeStore();
+  const knowledgeId = modeToKnowledgeId[selectedMode.value] || 'geometry_shape';
+  for (let i = 0; i < result.correctCount; i++) {
+    mathKnowledgeStore.recordResult(knowledgeId, true);
+  }
+  for (let i = result.correctCount; i < result.total; i++) {
+    mathKnowledgeStore.recordResult(knowledgeId, false);
+  }
 
   // 销毁 Phaser 实例
   destroyGame();

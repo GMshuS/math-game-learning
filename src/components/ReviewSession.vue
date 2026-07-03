@@ -57,7 +57,17 @@
       </div>
 
       <!-- 题目区 -->
-      <div v-if="currentQuestion" class="question-area">
+      <!-- 英语题目使用 EnglishQuestionRenderer 渲染 -->
+      <div v-if="currentQuestion && currentSubject === 'english'" class="question-area">
+        <EnglishQuestionRenderer
+          v-if="adaptedEnglishQuestion"
+          :question="adaptedEnglishQuestion"
+          :disabled="showAnswerResult"
+          @answer="selectEnglishAnswer"
+        />
+      </div>
+      <!-- 数学题目使用纯选择题按钮网格 -->
+      <div v-else-if="currentQuestion" class="question-area">
         <p class="question-text">{{ currentQuestion.text }}</p>
         <div class="options-grid">
           <button
@@ -144,7 +154,7 @@
 </template>
 
 <script setup>
-import { ref, onBeforeUnmount } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import { useMathKnowledgeStore } from '../store/mathKnowledgeStore';
 import { useEnglishKnowledgeStore } from '../store/englishKnowledgeStore';
 import { mathKnowledgeNodes, englishKnowledgeNodes } from '../config/knowledge';
@@ -152,8 +162,19 @@ import { useSettingsStore } from '../store/settingsStore';
 import { generateQuestion } from '../utils/questionGenerator';
 import { questionToMultipleChoice } from '../utils/questionUtils';
 import { getWordsByLevel } from '../config/english/grades';
+import EnglishQuestionRenderer from './EnglishQuestionRenderer.vue';
 
-defineEmits(['back']);
+const props = defineProps({
+  subject: {
+    type: String,
+    default: 'all'
+  }
+});
+
+const emit = defineEmits(['back']);
+
+const isSingleSubject = computed(() => props.subject !== 'all');
+
 const mathKnowledgeStore = useMathKnowledgeStore();
 const englishKnowledgeStore = useEnglishKnowledgeStore();
 const settingsStore = useSettingsStore();
@@ -162,12 +183,24 @@ const phase = ref('due-check');
 const dueItems = ref([]);
 const currentIndex = ref(0);
 const currentQuestion = ref(null);
+const currentSubject = ref('math');
 const userAnswer = ref(null);
 const showAnswerResult = ref(false);
 const showSelfAssess = ref(false);
 const isCorrect = ref(false);
 const qualitySelected = ref(null);
 const reviewResults = ref([]);
+
+// 将英语题目格式适配为 EnglishQuestionRenderer 所需格式
+const adaptedEnglishQuestion = computed(() => {
+  if (!currentQuestion.value || currentSubject.value !== 'english') return null;
+  return {
+    question: currentQuestion.value.text || currentQuestion.value.question,
+    options: currentQuestion.value.options,
+    answer: currentQuestion.value.correctAnswer,
+    type: 'choice'
+  };
+});
 
 // 收集到期知识点
 function collectDueItems() {
@@ -191,8 +224,13 @@ function collectDueItems() {
       }
     }
   };
-  addDue(mathKnowledgeStore.records, mathKnowledgeNodes, 'math');
-  addDue(englishKnowledgeStore.records, englishKnowledgeNodes, 'english');
+  // 根据 subject 过滤数据源
+  if (props.subject === 'all' || props.subject === 'math') {
+    addDue(mathKnowledgeStore.records, mathKnowledgeNodes, 'math');
+  }
+  if (props.subject === 'all' || props.subject === 'english') {
+    addDue(englishKnowledgeStore.records, englishKnowledgeNodes, 'english');
+  }
   // 按 nextReviewTime 升序排列（null 排最前面 → 首次复习优先）
   items.sort((a, b) => {
     if (a.nextReviewTime === null) return -1;
@@ -215,6 +253,7 @@ function loadQuestion() {
     phase.value = 'complete';
     return;
   }
+  currentSubject.value = item.subject;
   currentQuestion.value = null;
   userAnswer.value = null;
   showAnswerResult.value = false;
@@ -313,6 +352,14 @@ function selectAnswer(answer) {
   assessTimer = setTimeout(() => {
     showSelfAssess.value = true;
   }, 1500);
+}
+
+/**
+ * EnglishQuestionRenderer 的 @answer 事件处理
+ * 复用 selectAnswer 的判题和自评逻辑
+ */
+function selectEnglishAnswer(answer) {
+  selectAnswer(answer);
 }
 
 onBeforeUnmount(() => {

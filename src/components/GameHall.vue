@@ -3,6 +3,7 @@
     <div class="hall-header">
       <h2>🧮 数学乐园</h2>
       <div class="header-actions">
+        <button class="btn-knowledge" @click="$emit('startKnowledgeCenter')">📚 知识中心</button>
         <button class="btn-leaderboard" @click="$emit('openLeaderboard')">🏆 排行榜</button>
         <button class="btn-achievements" @click="$emit('openAchievements')">🏅 成就</button>
         <button class="btn-back" @click="$emit('back')">← 返回</button>
@@ -43,7 +44,6 @@ import { reactive, computed } from 'vue';
 import { useGameStore } from '../store/gameStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useMathKnowledgeStore } from '../store/mathKnowledgeStore';
-import { useEnglishKnowledgeStore } from '../store/englishKnowledgeStore';
 import { getDueCount } from '../utils/spacedRepetition';
 
 // ⚠️ 架构建议：以下 computed 直接访问 gameStore 深层嵌套属性（如 gameStore.speedChallenge?.bestScores?.base）。
@@ -62,6 +62,7 @@ const emit = defineEmits([
   'startGeometryGame',
   'startUnitGame',
   'startChartGame',
+  'startKnowledgeCenter',
   'openLeaderboard',
   'openAchievements'
 ]);
@@ -85,7 +86,6 @@ const listedCount = computed(() => {
 });
 
 const mathKnowledgeStore = useMathKnowledgeStore();
-const englishKnowledgeStore = useEnglishKnowledgeStore();
 const weakNodeCount = computed(() => {
   const records = mathKnowledgeStore.records;
   return Object.values(records).filter(r =>
@@ -93,7 +93,7 @@ const weakNodeCount = computed(() => {
   ).length;
 });
 const dueCount = computed(() => {
-  return getDueCount(mathKnowledgeStore.records) + getDueCount(englishKnowledgeStore.records);
+  return getDueCount(mathKnowledgeStore.records);
 });
 
 const weakNodeText = computed(() => {
@@ -416,6 +416,23 @@ const handleGameClick = (game) => {
 .btn-leaderboard:hover {
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(251, 191, 36, 0.4);
+}
+
+.btn-knowledge {
+  padding: 0.8rem 2rem;
+  background: linear-gradient(135deg, #34d399, #10b981);
+  border: none;
+  border-radius: 25px;
+  color: #fff;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-knowledge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(52, 211, 153, 0.4);
 }
 
 .btn-achievements {
