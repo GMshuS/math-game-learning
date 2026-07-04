@@ -9,6 +9,10 @@ import { getGradeRange, getGradeOperations } from '../config/grades';
 import { generate as registryGenerate, register } from '../questions/registry';
 import { gradeQuestionWeights } from '../config/gradeQuestionWeights';
 import { getAdjustedWeights, recordTypeGenerated } from '../config/knowledgeWeights';
+import {
+  weightedRandom,
+  createDiversityAwarePicker as wtCreateDiversityAwarePicker
+} from '../utils/weightTools';
 import { STORAGE_KEYS } from '../utils/storage';
 import { useMathKnowledgeStore } from '../store/mathKnowledgeStore';
 import { randomInt } from '../questions/_helpers';
@@ -68,57 +72,14 @@ register('ratioProportion', generateRatioProportion);
 register('scenario', generateScenario);
 
 /**
- * 加权随机选择
- * 根据权重对象返回一个键，权重越高被选中的概率越大
- * @param {Object} weights - { type: weight, ... }
- * @returns {string} 选中的类型键
- */
-function weightedRandom(weights) {
-  const entries = Object.entries(weights);
-  const totalWeight = entries.reduce((sum, [, w]) => sum + w, 0);
-  let random = Math.random() * totalWeight;
-  for (const [type, weight] of entries) {
-    random -= weight;
-    if (random <= 0) return type;
-  }
-  return entries[entries.length - 1][0];
-}
-
-/**
- * 对已选中的题型施加多样性惩罚，避免同一题型反复出现
- * @param {Object} weights - 原始调整后权重 { type: weight }
- * @param {Object} counter - 当前批次各题型已出现次数 { type: count }
- * @param {number} totalTypes - 可用题型总数
- * @returns {Object} 惩罚后的权重
- */
-function applyDiversityPenalty(weights, counter, totalTypes) {
-  // 防御：无可用题型时直接返回权重副本
-  if (totalTypes <= 0) return { ...weights };
-  const totalSoFar = Object.values(counter).reduce((a, b) => a + b, 0);
-  const expected = totalSoFar / totalTypes;
-  const result = { ...weights };
-  for (const [type, count] of Object.entries(counter)) {
-    if (count > expected) {
-      const penalty = 1 + (count - expected);
-      result[type] = Math.max(1, Math.round(result[type] / penalty));
-    }
-  }
-  return result;
-}
-
-/**
- * 创建一个多样性感知的题型选择器
- * 返回的 pick 函数每次调用会应用多样性惩罚并记录已选题型
+ * 创建本地多样性感知选择器（包装 weightTools 版，添加 recordTypeGenerated）
  * @param {Object} adjustedWeights - 调整后的权重
  * @returns {Function} pick() → type
  */
 function createDiversityAwarePicker(adjustedWeights) {
-  const counter = {};
-  const totalTypes = Object.keys(adjustedWeights).length;
+  const picker = wtCreateDiversityAwarePicker(adjustedWeights);
   return function pick() {
-    const penalized = applyDiversityPenalty(adjustedWeights, counter, totalTypes);
-    const type = weightedRandom(penalized);
-    counter[type] = (counter[type] || 0) + 1;
+    const type = picker();
     recordTypeGenerated(type);
     return type;
   };

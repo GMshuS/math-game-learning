@@ -7,7 +7,19 @@ import { useGameStore } from './gameStore';
 import { useSettingsStore } from './settingsStore';
 import { useEnglishKnowledgeStore } from './englishKnowledgeStore';
 import { speedSpellConfig } from '../config/english/speedSpell';
+import { SPEED_SPELL_TARGET_RATES, MIN_ATTEMPTS_BOOST } from '../config/english/englishTypeWeights';
 import { getWordsByLevel } from '../config/english/grades';
+import {
+  calcDeficiencyBoost,
+  calcSuccessDecay,
+  getRecencyFactor,
+  loadFrequencyData,
+  applyDiversityPenalty,
+  weightedRandom,
+  recordTypeGenerated,
+  recordCorrectAnswer,
+  recordWrongAnswer
+} from '../utils/weightTools';
 import {
   createChallengeState,
   createChallengeGetters,
@@ -19,7 +31,9 @@ import {
 
 export const useEnglishSpeedSpellStore = defineStore('englishSpeedSpell', {
   state: () => ({
-    ...createChallengeState()
+    ...createChallengeState(),
+    _typeCounter: {},        // { 'en2cn': count, 'cn2en': count, 'listening': count }
+    _successStreak: {}       // { 'en2cn': 连续答对数, 'cn2en': 连续答对数, 'listening': 连续答对数 }
   }),
 
   getters: {
@@ -33,6 +47,8 @@ export const useEnglishSpeedSpellStore = defineStore('englishSpeedSpell', {
      * @returns {boolean} 是否成功启动
      */
     startGame(mode) {
+      this._typeCounter = {};
+      this._successStreak = {};
       const config = speedSpellConfig.modes[mode];
       return baseStartGame(this, config, mode, () => this.generateQuestion());
     },
@@ -58,6 +74,10 @@ export const useEnglishSpeedSpellStore = defineStore('englishSpeedSpell', {
       // 按权重随机选题型
       const qType = this._pickQuestionType();
 
+      // 记录跨会话频率 & 更新本局内计数器
+      recordTypeGenerated(qType, 'english_speed');
+      this._typeCounter[qType] = (this._typeCounter[qType] || 0) + 1;
+
       // 生成干扰词（3个）
       const distractorDifficulty = this._getDistractorDifficulty();
       const distractors = this._generateDistractors(words, wordIndex, qType, distractorDifficulty, 3);
@@ -78,18 +98,52 @@ export const useEnglishSpeedSpellStore = defineStore('englishSpeedSpell', {
     },
 
     /**
-     * 按权重随机选题型
+     * 五层权重管道选题型
+     *
+     * 1. 基础权重（speedSpellConfig.questionTypes）
+     * 2. 错题 boost（calcDeficiencyBoost，冷启动保护：totalAttempts < 3 不启用）
+     * 3. 成功退火（calcSuccessDecay）
+     * 4. 频率衰减（getRecencyFactor）
+     * 5. 多样性惩罚（applyDiversityPenalty）
+     * 6. 加权随机选择（weightedRandom）
+     *
      * @returns {string} 'en2cn' | 'cn2en' | 'listening'
      */
     _pickQuestionType() {
       const types = speedSpellConfig.questionTypes;
-      const rand = Math.random();
-      let cumulative = 0;
+      const knowledgeStore = useEnglishKnowledgeStore();
+      const targetRates = SPEED_SPELL_TARGET_RATES;
+      const freqData = loadFrequencyData('english_speed');
+
+      // 1~4: 基础权重 × 错题boost × 成功退火 × 频率衰减
+      const adjustedWeights = {};
       for (const [type, cfg] of Object.entries(types)) {
-        cumulative += cfg.weight;
-        if (rand < cumulative) return type;
+        let weight = cfg.weight;
+
+        // 2. 错题 boost（冷启动保护）
+        const record = knowledgeStore.records[type];
+        if (record && record.totalAttempts >= MIN_ATTEMPTS_BOOST) {
+          const errorRate = record.wrongCount / record.totalAttempts;
+          const targetRate = targetRates[type] || 0.80;
+          weight *= calcDeficiencyBoost(errorRate, { targetRate });
+        }
+
+        // 3. 成功退火（连续答对后权重衰减）
+        const streak = this._successStreak[type] || 0;
+        weight *= calcSuccessDecay(streak);
+
+        // 4. 跨会话频率衰减（预加载 freqData 避免重复读取 localStorage）
+        weight *= getRecencyFactor(type, 'english_speed', freqData);
+
+        // 转为整数权重，最低不低于 1
+        adjustedWeights[type] = Math.max(1, Math.round(weight * 100));
       }
-      return 'en2cn';
+
+      // 5. 多样性惩罚（本局内出现越多权重越低）
+      const diversified = applyDiversityPenalty(adjustedWeights, this._typeCounter);
+
+      // 6. 加权随机选择
+      return weightedRandom(diversified);
     },
 
     /**
@@ -184,12 +238,20 @@ export const useEnglishSpeedSpellStore = defineStore('englishSpeedSpell', {
       if (!this.isPlaying || !this.currentQuestion) return false;
 
       const isCorrect = selectedIndex === this.currentQuestion.correctIndex;
+      const qType = this.currentQuestion.type;
 
-      // 记录错题到英语知识库
+      // 记录错题到英语知识库 & 成功退火跟踪 & 记录跨会话答题统计
       const englishKnowledgeStore = useEnglishKnowledgeStore();
-      const knowledgeNodeId = this.currentQuestion.type; // 'en2cn' | 'cn2en' | 'listening'
-      if (knowledgeNodeId) {
-        englishKnowledgeStore.recordResult(knowledgeNodeId, isCorrect);
+      if (qType) {
+        englishKnowledgeStore.recordResult(qType, isCorrect);
+
+        if (isCorrect) {
+          this._successStreak[qType] = (this._successStreak[qType] || 0) + 1;
+          recordCorrectAnswer(qType, 'english_speed');
+        } else {
+          this._successStreak[qType] = 0;
+          recordWrongAnswer(qType, 'english_speed');
+        }
       }
 
       return baseAnswer(this, isCorrect, {

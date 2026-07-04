@@ -11,6 +11,40 @@ import { useEnglishKnowledgeStore } from './englishKnowledgeStore';
 import { getTowerById, getFloorByNumber } from '../config/english/grammar';
 import { generateQuestion as generateEnglishQuestion } from '../utils/englishQuestionGenerator';
 
+/**
+ * 自适应 Level 计算
+ * 根据英语知识记录，对基础 level 进行三区自适应调整
+ *
+ * @param {string} knowledgeType - 知识点类型（如 'beVerb'）
+ * @param {number} floorNumber - 楼层号 (1-8)
+ * @param {object} knowledgeStore - englishKnowledgeStore 实例
+ * @returns {number} 调整后的 level (1-6)
+ */
+function calcAdaptiveLevel(knowledgeType, floorNumber, knowledgeStore) {
+  // 1. 基础等级（同现有逻辑）
+  const baseLevel = Math.min(Math.max(1, Math.floor(floorNumber / 2) + 1), 6);
+
+  // 2. 读取错题记录
+  const record = knowledgeStore?.records?.[knowledgeType];
+
+  // 3. 冷启动保护：不足 3 次答题不上自适应
+  if (!record || record.totalAttempts < 3) return baseLevel;
+
+  const errorRate = record.wrongCount / record.totalAttempts;
+
+  // 4. 三区自适应
+  if (errorRate > 0.50) {
+    // 错误率过半 → 降 1 级
+    return Math.max(1, baseLevel - 1);
+  }
+  if (errorRate < 0.15) {
+    // 错误率很低 → 升 1 级
+    return Math.min(6, baseLevel + 1);
+  }
+  // 稳定区 → 保持 baseLevel
+  return baseLevel;
+}
+
 export const useEnglishGrammarStore = defineStore('englishGrammar', {
   state: () => ({
     // 当前状态
@@ -166,11 +200,12 @@ export const useEnglishGrammarStore = defineStore('englishGrammar', {
         const knowledgeType = this._towerIdToKnowledgeType(towerId);
         if (knowledgeType && dynamicSupportedTypes.includes(knowledgeType)) {
           const generatedQuestions = [];
+          const knowledgeStore = useEnglishKnowledgeStore();
           // 尝试生成 floorData.questions.length 个题目，默认 5 题
           const targetCount = floorData.questions.length || 5;
           for (let i = 0; i < targetCount; i++) {
-            // level 根据楼层号调整: 楼层越高 level 越高
-            const level = Math.min(Math.max(1, Math.floor(floorData.floor / 2) + 1), 6);
+            // level 根据知识记录自适应调整
+            const level = calcAdaptiveLevel(knowledgeType, floorData.floor, knowledgeStore);
             const q = generateEnglishQuestion(knowledgeType, level);
             if (q) {
               generatedQuestions.push(
@@ -190,9 +225,11 @@ export const useEnglishGrammarStore = defineStore('englishGrammar', {
         const knowledgeType = this._towerIdToKnowledgeType(towerId);
         if (knowledgeType && dynamicSupportedTypes.includes(knowledgeType)) {
           const generatedQuestions = [];
+          const knowledgeStore = useEnglishKnowledgeStore();
           const targetCount = floorData.questions.length || 5;
           for (let i = 0; i < targetCount; i++) {
-            const level = Math.min(Math.max(3, floorData.floor), 6);
+            // BOSS 楼层同样使用自适应 level
+            const level = calcAdaptiveLevel(knowledgeType, floorData.floor, knowledgeStore);
             const q = generateEnglishQuestion(knowledgeType, level);
             if (q) {
               generatedQuestions.push(

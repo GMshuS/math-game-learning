@@ -1,9 +1,22 @@
 /**
  * 权重加载逻辑
  * 优先级: admin override (weightOverrides) > config 默认 > errorBoost 乘数
+ *
+ * 权重计算函数已提取至 src/utils/weightTools.js，此处仅做 namespace='math' 的包装。
  */
 
 import { STORAGE_KEYS } from '../utils/storage';
+import {
+  calcDeficiencyBoost,
+  calcSuccessDecay,
+  loadFrequencyData,
+  saveFrequencyData,
+  recordTypeGenerated as wtRecordTypeGenerated,
+  getRecencyFactor as wtGetRecencyFactor,
+  recordCorrectAnswer as wtRecordCorrectAnswer,
+  recordWrongAnswer as wtRecordWrongAnswer,
+  getSuccessStreak
+} from '../utils/weightTools';
 
 // 不足度模型 — 目标正确率
 export const TARGET_CORRECT_RATE = 0.80;
@@ -16,12 +29,6 @@ export const MAX_BOOST = 2.0;
 
 // 成功衰减率（答对退火用）
 export const DECAY_RATE = 5;
-
-// localStorage key — 跨会话题型频率记录
-const STORAGE_KEY_TYPE_FREQUENCY = 'math_game_type_frequency';
-
-// 内存中连续答对计数器（页面刷新后重置，第一期行为）
-const successStreakMap = new Map();
 
 /**
  * 从 localStorage 读取 weightOverrides
@@ -50,89 +57,53 @@ export function loadKnowledgeConfig() {
 }
 
 /**
- * 从 localStorage 读取题型频率记录
+ * 从 localStorage 读取题型频率记录（namespace='math' 包装）
  * @returns {Object} { [type]: { frequency: number, lastSeen: number } }
  */
 export function loadTypeFrequency() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_TYPE_FREQUENCY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+  return loadFrequencyData('math');
 }
 
 /**
- * 将题型频率记录写入 localStorage
+ * 将题型频率记录写入 localStorage（namespace='math' 包装）
  * @param {Object} data - { [type]: { frequency: number, lastSeen: number } }
  */
 export function saveTypeFrequency(data) {
-  try {
-    localStorage.setItem(STORAGE_KEY_TYPE_FREQUENCY, JSON.stringify(data));
-  } catch (e) {
-    console.warn('无法保存题型频率数据:', e.message);
-  }
+  saveFrequencyData('math', data);
 }
 
 /**
- * 记录一道题目已被生成，更新跨会话频率
- * 半衰期 1 小时（3600000ms），decay = 0.5^(elapsed/3600000)
+ * 记录一道题目已被生成，更新跨会话频率（namespace='math' 包装）
  * @param {string} type - 题型标识
  */
 export function recordTypeGenerated(type) {
-  const data = loadTypeFrequency();
-  const now = Date.now();
-  const record = data[type];
-  let frequency = 0;
-  if (record) {
-    const elapsed = now - record.lastSeen;
-    const decay = Math.pow(0.5, elapsed / 3600000);
-    frequency = record.frequency * decay + 1;
-  } else {
-    frequency = 1;
-  }
-  data[type] = { frequency, lastSeen: now };
-  saveTypeFrequency(data);
+  wtRecordTypeGenerated(type, 'math');
 }
 
 /**
- * 计算某题型的频率衰减因子
- * recencyFactor = clamp(1.2 - (frequency - 1) * 0.1, 0.5, 1.2)
- * frequency=0 → 1.20（轻微提权），frequency=6 → 0.70（降权）
+ * 计算某题型的频率衰减因子（namespace='math' 包装）
  * @param {string} type - 题型标识
- * @param {Object} [frequencyData] - 可选，预加载的频率数据（避免重复读取 localStorage）
+ * @param {Object} [frequencyData] - 可选，预加载的频率数据
  * @returns {number} 衰减因子
  */
 export function getRecencyFactor(type, frequencyData) {
-  const data = frequencyData || loadTypeFrequency();
-  const record = data[type];
-  const frequency = record ? record.frequency : 0;
-  const factor = 1.2 - (frequency - 1) * 0.1;
-  return Math.max(0.5, Math.min(1.2, factor));
+  return wtGetRecencyFactor(type, 'math', frequencyData);
 }
 
 /**
- * 记录一道题目回答正确，连续答对计数器 +1
+ * 记录一道题目回答正确，连续答对计数器 +1（namespace='math' 包装）
  * @param {string} type - 题型标识
  */
 export function recordCorrectAnswer(type) {
-  // 防御：确保 type 为有效字符串，防止污染 successStreakMap
-  if (!type || typeof type !== 'string') return;
-  const current = successStreakMap.get(type) || 0;
-  successStreakMap.set(type, current + 1);
+  wtRecordCorrectAnswer(type, 'math');
 }
 
 /**
- * 记录一道题目回答错误，重置连续答对计数器为 0
+ * 记录一道题目回答错误，重置连续答对计数器为 0（namespace='math' 包装）
  * @param {string} type - 题型标识
  */
 export function recordWrongAnswer(type) {
-  // 防御：确保 type 为有效字符串
-  if (!type || typeof type !== 'string') return;
-  // 清理：count 归零时删除键以释放 Map 空间
-  if (successStreakMap.has(type) && successStreakMap.get(type) > 0) {
-    successStreakMap.delete(type);
-  }
+  wtRecordWrongAnswer(type, 'math');
 }
 
 /**
@@ -152,7 +123,7 @@ export function getAdjustedWeights(grade, baseWeights, knowledgeStore) {
   const minAttempts = config.minAttempts || 3;
 
   // 一次性加载频率数据，避免循环中反复读取 localStorage
-  const frequencyData = loadTypeFrequency();
+  const frequencyData = loadFrequencyData('math');
 
   for (const [type, defaultWeight] of Object.entries(baseWeights)) {
     // 优先级1: admin override
@@ -163,18 +134,19 @@ export function getAdjustedWeights(grade, baseWeights, knowledgeStore) {
     const record = knowledgeStore?.records?.[type];
     if (record && record.totalAttempts >= minAttempts) {
       const errorRate = record.wrongCount / record.totalAttempts;
-      const correctRate = 1 - errorRate;
-      const deficiency = Math.max(0, TARGET_CORRECT_RATE - correctRate);
-      boost = 1 + Math.log(1 + deficiency * DEFICIENCY_K) / Math.log(1 + DEFICIENCY_K);
-      boost = Math.min(boost, MAX_BOOST);
+      boost = calcDeficiencyBoost(errorRate, {
+        targetRate: TARGET_CORRECT_RATE,
+        K: DEFICIENCY_K,
+        cap: MAX_BOOST
+      });
     }
 
     // 优先级3: 成功抵消（答对退火）— 连续答对时指数衰减
-    const successCount = successStreakMap.get(type) || 0;
-    const effectiveBoost = boost * Math.exp(-successCount / DECAY_RATE);
+    const successCount = getSuccessStreak(type, 'math');
+    const effectiveBoost = boost * calcSuccessDecay(successCount, DECAY_RATE);
 
     // 优先级4: 跨会话频率衰减 — 出现越频繁权重越低（传入预加载的 frequencyData 避免重复读取）
-    const recencyFactor = getRecencyFactor(type, frequencyData);
+    const recencyFactor = getRecencyFactor(type, 'math', frequencyData);
 
     adjusted[type] = Math.round(weight * effectiveBoost * recencyFactor);
   }
