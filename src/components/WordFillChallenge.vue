@@ -101,12 +101,12 @@
 import { ref, computed, nextTick } from 'vue';
 import { generateQuestion } from '../utils/questionGenerator.js';
 import { checkAnswer } from '../utils/questionUtils.js';
-import { useGameStore } from '../store/gameStore.js';
+import { useSettingsStore } from '../store/settingsStore.js';
 import { useMathKnowledgeStore } from '../store/mathKnowledgeStore.js';
 
 const emit = defineEmits(['back']);
 
-const gameStore = useGameStore();
+const settingsStore = useSettingsStore();
 const mathKnowledgeStore = useMathKnowledgeStore();
 
 // 阶段：select | playing | result
@@ -156,12 +156,12 @@ const elapsedTime = computed(() => {
  * 生成交替的 word / numberFill 题目
  */
 function generateQuestions(count) {
-  const grade = gameStore.playerData?.grade || 1;
+  const grade = settingsStore.gradeRange.max || 1;
   const result = [];
   for (let i = 0; i < count; i++) {
     // word 和 numberFill 交替
     const type = i % 2 === 0 ? 'word' : 'numberFill';
-    const question = generateQuestion(grade, type);
+    const question = generateQuestion(grade, type, { gradeRange: settingsStore.gradeRange });
     result.push(question);
   }
   return result;
