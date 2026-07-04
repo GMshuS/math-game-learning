@@ -1,8 +1,27 @@
 <template>
   <div class="level-select">
+    <GameTutorial
+      v-if="showTutorial"
+      title="⚔️ 冒险模式玩法说明"
+      :steps="adventureTutorialSteps"
+      @close="showTutorial = false"
+    />
+    <LevelInfoPanel
+      v-if="showLevelInfo"
+      title="📋 关卡说明"
+      :items="levelItems"
+      mode="flat"
+      :accentColor="area.color"
+      @close="showLevelInfo = false"
+    />
     <div class="level-header" :style="{ borderColor: area.color }">
       <h2 :style="{ color: area.color }">{{ areaIcon }} {{ area.name }}</h2>
       <button class="btn-back" @click="emit('back')">← 返回地图</button>
+    </div>
+    
+    <div class="header-actions">
+      <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
+      <button class="btn-level-info" @click="showLevelInfo = true">📋 关卡说明</button>
     </div>
     
     <p class="level-description">{{ area.description }}</p>
@@ -23,6 +42,8 @@
           {{ level.number }}
         </div>
         
+        <div class="level-title">{{ level.title }}</div>
+        
         <div class="level-stars">
           <span v-for="star in 3" :key="star" class="star" :class="{ active: star <= level.stars }">
             {{ star <= level.stars ? '⭐' : '☆' }}
@@ -40,7 +61,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import GameTutorial from './GameTutorial.vue';
+import LevelInfoPanel from './LevelInfoPanel.vue';
 
 const props = defineProps({
   area: {
@@ -59,6 +82,48 @@ const props = defineProps({
 
 const emit = defineEmits(['levelSelect', 'back']);
 
+// ============ 玩法说明 ============
+const showTutorial = ref(false);
+
+const adventureTutorialSteps = [
+  {
+    title: '选择关卡',
+    description: '在世界地图上选择已解锁的区域进入关卡，每个区域有不同的难度等级。'
+  },
+  {
+    title: '回答数学问题',
+    description: '屏幕会显示数学题目和 4 个选项，点击正确答案对怪物造成伤害。'
+  },
+  {
+    title: '战斗机制',
+    description: '答对题目对怪物造成 10 点伤害，答错自己受到 5 点伤害。在 60 秒内答对题目可以获得额外连击奖励！'
+  },
+  {
+    title: '连击奖励',
+    description: '连续答对题目可以增加连击数，连击数越高，获胜后获得的经验和金币奖励越多！'
+  },
+  {
+    title: '取得胜利',
+    description: '将怪物的血量归零即可获胜，获得经验和金币奖励。如果自己的血量归零或时间用完则挑战失败。'
+  }
+];
+
+// ============ 关卡说明 ============
+const showLevelInfo = ref(false);
+
+const levelItems = computed(() => {
+  return levels.value.map(level => ({
+    number: level.number,
+    title: level.title,
+    description: level.desc || '',
+    completed: level.completed,
+    locked: level.locked,
+    stars: level.stars
+  }));
+});
+
+// ============ 区域图标 ============
+// NOTE: Keep in sync with WorldMapScene.js getAreaIcon() — same 5 icons in same order
 const areaIcon = computed(() => {
   const icons = { 'area_1': '🌲', 'area_2': '🏔️', 'area_3': '🏰', 'area_4': '🏝️', 'area_5': '👑' };
   return icons[props.area.id] || '⭐';
@@ -71,7 +136,10 @@ const selectLevel = (level) => {
 
 const levels = computed(() => {
   const result = [];
-  const totalLevels = props.area.levels || 10;
+  const rawLevels = props.area.levels;
+  
+  // Support both array and number formats for backward compatibility
+  const totalLevels = Array.isArray(rawLevels) ? rawLevels.length : (rawLevels || 10);
   
   for (let i = 1; i <= totalLevels; i++) {
     const levelId = `${props.area.id}_level_${i}`;
@@ -82,9 +150,14 @@ const levels = computed(() => {
     // Subsequent levels unlock when previous level is completed
     const isLocked = i > 1 && !props.completedLevels.includes(`${props.area.id}_level_${i - 1}`);
     
+    // If levels is an array, get existing level data (title, desc)
+    const levelData = Array.isArray(rawLevels) ? (rawLevels[i - 1] || {}) : {};
+    
     result.push({
       number: i,
       id: levelId,
+      title: levelData.title || `第 ${i} 关`,
+      desc: levelData.desc || '',
       locked: isLocked,
       completed: isCompleted,
       stars: levelStars
@@ -126,6 +199,32 @@ const levels = computed(() => {
 .level-description {
   color: #cccccc;
   margin-bottom: 1.5rem;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+  width: 100%;
+  max-width: 800px;
+}
+
+.btn-help,
+.btn-level-info {
+  padding: 0.5rem 1.2rem;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.btn-help:hover,
+.btn-level-info:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
 .level-grid {
@@ -181,7 +280,19 @@ const levels = computed(() => {
   font-weight: bold;
   font-size: 1.2rem;
   color: #fff;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.level-title {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  margin-bottom: 0.3rem;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .level-stars {

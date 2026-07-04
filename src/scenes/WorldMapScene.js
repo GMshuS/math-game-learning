@@ -272,7 +272,7 @@ export default class WorldMapScene extends Phaser.Scene {
     }).setOrigin(0.5));
     
     // 关卡信息
-    this.dialogContainer.add(this.add.text(0, 0, `关卡数：${area.levels}`, {
+    this.dialogContainer.add(this.add.text(0, 0, `关卡数：${Array.isArray(area.levels) ? area.levels.length : area.levels}`, {
       font: '16px Microsoft YaHei',
       color: area.color
     }).setOrigin(0.5));
@@ -342,6 +342,7 @@ export default class WorldMapScene extends Phaser.Scene {
   /**
    * 获取区域图标
    */
+  // NOTE: Keep in sync with LevelSelect.vue areaIcon — same 5 icons in same order
   getAreaIcon(index) {
     const icons = ['🌲', '🏔️', '🏰', '🏝️', '👑'];
     return icons[index] || '⭐';

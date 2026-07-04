@@ -18,7 +18,10 @@
     <!-- 准备阶段 -->
     <div v-else-if="phase === 'prepare'" class="prepare-phase">
       <div class="boss-intro-card">
-        <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
+        <div class="prepare-header-actions">
+          <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
+          <button class="btn-help" @click="showLevelInfo = true">📋 关卡说明</button>
+        </div>
         <div class="boss-big-icon">{{ bossConfig.icon || '👹' }}</div>
         <h2>{{ bossConfig.name }}</h2>
         <p class="boss-desc">击败 {{ bossConfig.name }}，获得区域精灵！</p>
@@ -202,16 +205,25 @@
         </div>
       </div>
     </div>
+    <LevelInfoPanel
+      v-if="showLevelInfo"
+      title="📋 关卡说明"
+      :items="levelInfoItems"
+      mode="grouped"
+      accentColor="#7c3aed"
+      @close="showLevelInfo = false"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import GameTutorial from './GameTutorial.vue';
+import LevelInfoPanel from './LevelInfoPanel.vue';
 import { useEnglishGrammarStore } from '../store/englishGrammarStore';
 import { useEnglishSpiritStore } from '../store/englishSpiritStore';
 import { useEnglishAdventureStore } from '../store/englishAdventureStore';
-import { getTowerById, getFloorByNumber } from '../config/english/grammar';
+import { getTowerById } from '../config/english/grammar';
 import { getSpirit } from '../config/english/spirits';
 import { getEnglishRegion } from '../config/english/adventure';
 
@@ -251,6 +263,29 @@ const tutorialSteps = [
 function closeTutorial() {
   showTutorial.value = false;
 }
+
+// ============ 关卡说明 ============
+const showLevelInfo = ref(false);
+
+const levelInfoItems = computed(() => {
+  const region = regionConfig.value;
+  if (!region || !region.towers) return [];
+
+  return region.towers.map(towerId => {
+    const tower = getTowerById(towerId);
+    if (!tower) return null;
+    return {
+      groupTitle: `${tower.icon || '📚'} ${tower.name}`,
+      groupDesc: tower.description || '',
+      floors: tower.floors.map(f => ({
+        number: f.floor,
+        title: f.title,
+        description: f.description,
+        type: f.type
+      }))
+    };
+  }).filter(Boolean);
+});
 
 // ============ Stores ============
 const grammarStore = useEnglishGrammarStore();
@@ -645,6 +680,14 @@ onUnmounted(() => {
 
 .btn-help:hover {
   background: rgba(102, 126, 234, 0.5);
+}
+
+.prepare-header-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.8rem;
+  margin-bottom: 0.5rem;
+  width: 100%;
 }
 
 /* ========== 加载状态 ========== */

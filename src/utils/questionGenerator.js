@@ -8,7 +8,7 @@
 import { getGradeRange, getGradeOperations } from '../config/grades';
 import { generate as registryGenerate, register } from '../questions/registry';
 import { gradeQuestionWeights } from '../config/gradeQuestionWeights';
-import { getAdjustedWeights } from '../config/knowledgeWeights';
+import { getAdjustedWeights, recordTypeGenerated } from '../config/knowledgeWeights';
 import { STORAGE_KEYS } from '../utils/storage';
 import { useMathKnowledgeStore } from '../store/mathKnowledgeStore';
 import { randomInt } from '../questions/_helpers';
@@ -82,6 +82,46 @@ function weightedRandom(weights) {
     if (random <= 0) return type;
   }
   return entries[entries.length - 1][0];
+}
+
+/**
+ * 对已选中的题型施加多样性惩罚，避免同一题型反复出现
+ * @param {Object} weights - 原始调整后权重 { type: weight }
+ * @param {Object} counter - 当前批次各题型已出现次数 { type: count }
+ * @param {number} totalTypes - 可用题型总数
+ * @returns {Object} 惩罚后的权重
+ */
+function applyDiversityPenalty(weights, counter, totalTypes) {
+  // 防御：无可用题型时直接返回权重副本
+  if (totalTypes <= 0) return { ...weights };
+  const totalSoFar = Object.values(counter).reduce((a, b) => a + b, 0);
+  const expected = totalSoFar / totalTypes;
+  const result = { ...weights };
+  for (const [type, count] of Object.entries(counter)) {
+    if (count > expected) {
+      const penalty = 1 + (count - expected);
+      result[type] = Math.max(1, Math.round(result[type] / penalty));
+    }
+  }
+  return result;
+}
+
+/**
+ * 创建一个多样性感知的题型选择器
+ * 返回的 pick 函数每次调用会应用多样性惩罚并记录已选题型
+ * @param {Object} adjustedWeights - 调整后的权重
+ * @returns {Function} pick() → type
+ */
+function createDiversityAwarePicker(adjustedWeights) {
+  const counter = {};
+  const totalTypes = Object.keys(adjustedWeights).length;
+  return function pick() {
+    const penalized = applyDiversityPenalty(adjustedWeights, counter, totalTypes);
+    const type = weightedRandom(penalized);
+    counter[type] = (counter[type] || 0) + 1;
+    recordTypeGenerated(type);
+    return type;
+  };
 }
 
 /**
@@ -248,10 +288,10 @@ export function generateQuestionSet(grade, count = 10, options = {}) {
         }
       }
       if (Object.keys(filteredWeights).length > 0) {
-        // ★ 注入错题反馈权重
+        // ★ 注入错题反馈权重 + 多样性约束
         const mathKnowledgeStore = useMathKnowledgeStore();
         const adjustedWeights = getAdjustedWeights(grade, filteredWeights, mathKnowledgeStore);
-        pickType = () => weightedRandom(adjustedWeights);
+        pickType = createDiversityAwarePicker(adjustedWeights);
       } else {
         // 备选：指定题型都无权重时回退等概率
         pickType = () => types[randomInt(0, types.length - 1)];
@@ -261,8 +301,52 @@ export function generateQuestionSet(grade, count = 10, options = {}) {
       pickType = () => types[randomInt(0, types.length - 1)];
     }
   } else {
-    // types 为空 → 委托 generateQuestion 使用完整权重
-    pickType = () => 'random';
+    // types 为空 → 使用完整权重 + 多样性约束（只计算一次 adjustedWeights）
+    const gradeRange = options.gradeRange || { min: grade, max: grade };
+    const effectiveWeights = loadGradeWeightsWithOverrides();
+    const mergedWeights = mergeWeightsForRange(gradeRange.min, gradeRange.max, 'linear_up', effectiveWeights);
+
+    if (mergedWeights && Object.keys(mergedWeights).length > 0) {
+      const availableTypes = getAvailableTypesForRange(gradeRange.min, gradeRange.max);
+      const filteredWeights = {};
+      for (const type of availableTypes) {
+        if (mergedWeights[type] !== undefined) {
+          filteredWeights[type] = mergedWeights[type];
+        }
+      }
+      // custom 题型集成（策略C1）
+      if (mode) {
+        const customTemplateStore = useCustomTemplateStore();
+        if (customTemplateStore.isModeEnabled(mode)) {
+          const customWeight = getCustomWeight(grade);
+          if (customWeight > 0) {
+            filteredWeights.custom = customWeight;
+          }
+        }
+      }
+      if (Object.keys(filteredWeights).length > 0) {
+        const mathKnowledgeStore = useMathKnowledgeStore();
+        const adjustedWeights = getAdjustedWeights(grade, filteredWeights, mathKnowledgeStore);
+        pickType = createDiversityAwarePicker(adjustedWeights);
+      } else {
+        // Fallback: 等概率选择可用题型
+        pickType = () => availableTypes[randomInt(0, availableTypes.length - 1)];
+      }
+    } else {
+      // Fallback: 权重配置不存在，回退到等概率
+      const operations = getGradeOperations(grade);
+      const fallbackTypes = [];
+      if (operations.includes('add')) fallbackTypes.push('add');
+      if (operations.includes('subtract')) fallbackTypes.push('subtract');
+      if (operations.includes('multiply')) fallbackTypes.push('multiply');
+      if (operations.includes('divide')) fallbackTypes.push('divide');
+      if (operations.includes('fraction')) fallbackTypes.push('fraction');
+      if (operations.includes('decimal')) fallbackTypes.push('decimal');
+      if (operations.includes('percentage')) fallbackTypes.push('percentage');
+      if (grade <= 3 && Math.random() < 0.3) fallbackTypes.push('word');
+      if (grade >= 3 && operations.includes('multiply') && operations.includes('add')) fallbackTypes.push('mixed');
+      pickType = () => fallbackTypes[randomInt(0, fallbackTypes.length - 1)];
+    }
   }
 
   const questions = [];
