@@ -125,6 +125,24 @@ const resultStars = ref(0);
 const resultData = ref({ score: 0, correctCount: 0, total: 0 });
 
 /**
+ * 创建 Phaser 游戏配置（提取为共享函数避免 DRY 重复）
+ */
+function createPhaserConfig(container) {
+  return {
+    type: Phaser.AUTO,
+    parent: container,
+    width: 800,
+    height: 600,
+    backgroundColor: '#0f1729',
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    scene: [GeometryScene]
+  };
+}
+
+/**
  * 开始游戏
  */
 function startGame() {
@@ -136,18 +154,7 @@ function startGame() {
   // 等待 DOM 更新后再创建 Phaser 实例
   requestAnimationFrame(() => {
     if (gameContainer.value) {
-      const config = {
-        type: Phaser.AUTO,
-        parent: gameContainer.value,
-        width: 800,
-        height: 600,
-        backgroundColor: '#0f1729',
-        scale: {
-          mode: Phaser.Scale.FIT,
-          autoCenter: Phaser.Scale.CENTER_BOTH
-        },
-        scene: [GeometryScene]
-      };
+      const config = createPhaserConfig(gameContainer.value);
 
       game = new Phaser.Game(config);
 
@@ -241,18 +248,7 @@ function restartGame() {
 
   requestAnimationFrame(() => {
     if (gameContainer.value) {
-      const config = {
-        type: Phaser.AUTO,
-        parent: gameContainer.value,
-        width: 800,
-        height: 600,
-        backgroundColor: '#0f1729',
-        scale: {
-          mode: Phaser.Scale.FIT,
-          autoCenter: Phaser.Scale.CENTER_BOTH
-        },
-        scene: [GeometryScene]
-      };
+      const config = createPhaserConfig(gameContainer.value);
 
       game = new Phaser.Game(config);
 

@@ -269,10 +269,11 @@ export default class GeometryScene extends Phaser.Scene {
     // 角度数字标签
     const labelX = cx + Math.cos(-rad / 2) * (radius * 0.55);
     const labelY = cy + Math.sin(-rad / 2) * (radius * 0.55);
-    this.add.text(labelX, labelY, `${degree}°`, {
+    const degreeLabel = this.add.text(labelX, labelY, `${degree}°`, {
       font: 'bold 16px Microsoft YaHei',
       color: '#fbbf24'
     }).setOrigin(0.5);
+    this._modeGraphics.push(degreeLabel);
 
     // 顶点小圆点
     g.fillStyle(0xffffff);
@@ -292,10 +293,11 @@ export default class GeometryScene extends Phaser.Scene {
         g.lineTo(tx, ty);
         g.strokePath();
         // 标小数字
-        this.add.text(tx, ty + 10, `${deg}°`, {
+        const degLabel = this.add.text(tx, ty + 10, `${deg}°`, {
           font: '10px Microsoft YaHei',
           color: '#64748b'
         }).setOrigin(0.5);
+        this._modeGraphics.push(degLabel);
       });
     }
 
@@ -317,24 +319,28 @@ export default class GeometryScene extends Phaser.Scene {
       const side = dim.side || 4;
       const size = Math.min(80, side * 12);
       g.strokeRect(cx - size / 2, cy - size / 2, size, size);
-      this.add.text(cx, cy + size / 2 + 15, `${side}厘米`, {
+      const txt1 = this.add.text(cx, cy + size / 2 + 15, `${side}厘米`, {
         font: '14px Microsoft YaHei', color: '#94a3b8'
       }).setOrigin(0.5);
-      this.add.text(cx + size / 2 + 15, cy, `${side}厘米`, {
+      this._modeGraphics.push(txt1);
+      const txt2 = this.add.text(cx + size / 2 + 15, cy, `${side}厘米`, {
         font: '14px Microsoft YaHei', color: '#94a3b8'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txt2);
     } else if (shape === 'rectangle') {
       const w = dim.width || 6;
       const h = dim.height || 4;
       const pw = Math.min(120, w * 12);
       const ph = Math.min(80, h * 12);
       g.strokeRect(cx - pw / 2, cy - ph / 2, pw, ph);
-      this.add.text(cx, cy + ph / 2 + 15, `${w}厘米`, {
+      const txt3 = this.add.text(cx, cy + ph / 2 + 15, `${w}厘米`, {
         font: '14px Microsoft YaHei', color: '#94a3b8'
       }).setOrigin(0.5);
-      this.add.text(cx + pw / 2 + 15, cy, `${h}厘米`, {
+      this._modeGraphics.push(txt3);
+      const txt4 = this.add.text(cx + pw / 2 + 15, cy, `${h}厘米`, {
         font: '14px Microsoft YaHei', color: '#94a3b8'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txt4);
     } else if (shape === 'triangle') {
       const base = dim.base || 6;
       const height = dim.height || 5;
@@ -348,12 +354,14 @@ export default class GeometryScene extends Phaser.Scene {
       g.closePath();
       g.strokePath();
       // 底和高标签
-      this.add.text(cx, cy + ph / 2 + 15, `底=${base}厘米`, {
+      const txt5 = this.add.text(cx, cy + ph / 2 + 15, `底=${base}厘米`, {
         font: '12px Microsoft YaHei', color: '#94a3b8'
       }).setOrigin(0.5);
-      this.add.text(cx + pw / 2 + 25, cy, `高=${height}厘米`, {
+      this._modeGraphics.push(txt5);
+      const txt6 = this.add.text(cx + pw / 2 + 25, cy, `高=${height}厘米`, {
         font: '12px Microsoft YaHei', color: '#94a3b8'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txt6);
     } else if (shape === 'parallelogram') {
       const base = dim.base || 6;
       const height = dim.height || 4;
@@ -367,9 +375,10 @@ export default class GeometryScene extends Phaser.Scene {
       g.lineTo(cx - pw / 2, cy + ph / 2);
       g.closePath();
       g.strokePath();
-      this.add.text(cx, cy + ph / 2 + 15, `底=${base}厘米`, {
+      const txt7 = this.add.text(cx, cy + ph / 2 + 15, `底=${base}厘米`, {
         font: '12px Microsoft YaHei', color: '#94a3b8'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txt7);
     } else if (shape === 'trapezoid') {
       const top = dim.top || 4;
       const bottom = dim.bottom || 8;
@@ -384,9 +393,10 @@ export default class GeometryScene extends Phaser.Scene {
       g.lineTo(cx - pb / 2, cy + ph / 2);
       g.closePath();
       g.strokePath();
-      this.add.text(cx, cy + ph / 2 + 15, `上底=${top} 下底=${bottom}`, {
+      const txt8 = this.add.text(cx, cy + ph / 2 + 15, `上底=${top} 下底=${bottom}`, {
         font: '12px Microsoft YaHei', color: '#94a3b8'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txt8);
     }
 
     this._modeGraphics.push(g);
@@ -408,16 +418,18 @@ export default class GeometryScene extends Phaser.Scene {
       // 原始位置
       g.lineStyle(3, 0x60a5fa);
       g.strokeRect(cx - size / 2 - dist / 2, cy - size / 2, size, size);
-      this.add.text(cx - dist / 2, cy + size / 2 + 10, 'A', {
+      const txtA = this.add.text(cx - dist / 2, cy + size / 2 + 10, 'A', {
         font: '14px Microsoft YaHei', color: '#60a5fa'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtA);
 
       // 平移后位置（虚线）
       g.lineStyle(3, 0xf472b6, 0.6);
       g.strokeRect(cx + size / 2 + dist / 2, cy - size / 2, size, size);
-      this.add.text(cx + dist / 2, cy + size / 2 + 10, 'B', {
+      const txtB = this.add.text(cx + dist / 2, cy + size / 2 + 10, 'B', {
         font: '14px Microsoft YaHei', color: '#f472b6'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtB);
 
       // 箭头
       const arrowStartX = cx - dist / 2 + size / 2;
@@ -444,16 +456,18 @@ export default class GeometryScene extends Phaser.Scene {
       // 中心点 O
       g.fillStyle(0xffffff);
       g.fillCircle(cx, cy, 4);
-      this.add.text(cx + 8, cy - 8, 'O', {
+      const txtO = this.add.text(cx + 8, cy - 8, 'O', {
         font: '14px Microsoft YaHei', color: '#ffffff'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtO);
 
       // 原始位置（右侧一个点）
       g.fillStyle(0x60a5fa);
       g.fillCircle(cx + r, cy, 6);
-      this.add.text(cx + r, cy + 15, 'A', {
+      const txtA2 = this.add.text(cx + r, cy + 15, 'A', {
         font: '14px Microsoft YaHei', color: '#60a5fa'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtA2);
 
       // 旋转弧线
       g.lineStyle(2, 0xfbbf24, 0.6);
@@ -473,17 +487,19 @@ export default class GeometryScene extends Phaser.Scene {
       const ty = cy + Math.sin(rad) * r;
       g.fillStyle(0xf472b6);
       g.fillCircle(tx, ty, 6);
-      this.add.text(tx, ty + 15, 'A\'', {
+      const txtAprime = this.add.text(tx, ty + 15, 'A\'', {
         font: '14px Microsoft YaHei', color: '#f472b6'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtAprime);
 
       // 角度标签
       const midAngle = rad / 2;
       const lx = cx + Math.cos(midAngle) * (r * 0.6);
       const ly = cy + Math.sin(midAngle) * (r * 0.6);
-      this.add.text(lx, ly, `${deg}°`, {
+      const txtDeg = this.add.text(lx, ly, `${deg}°`, {
         font: '12px Microsoft YaHei', color: '#fbbf24'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtDeg);
     } else if (question.subType === 'symmetry') {
       // 轴对称
       const size = 35;
@@ -560,9 +576,10 @@ export default class GeometryScene extends Phaser.Scene {
       g.lineTo(cx + s / 2 + offset, cy + s / 2 - offset);
       g.strokePath();
 
-      this.add.text(cx, cy + s / 2 + 18, `棱长=${side}厘米`, {
+      const txtCube = this.add.text(cx, cy + s / 2 + 18, `棱长=${side}厘米`, {
         font: '12px Microsoft YaHei', color: '#94a3b8'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtCube);
     } else if (solid === 'cuboid') {
       const w = Math.min(90, (dim.width || 4) * 12);
       const h = Math.min(60, (dim.height || 3) * 12);
@@ -585,9 +602,10 @@ export default class GeometryScene extends Phaser.Scene {
       g.lineTo(cx + w / 2 + offset, cy + h / 2 - offset);
       g.strokePath();
 
-      this.add.text(cx, cy + h / 2 + 18, `${dim.width||4}×${dim.depth||2}×${dim.height||3}厘米`, {
+      const txtCuboid = this.add.text(cx, cy + h / 2 + 18, `${dim.width||4}×${dim.depth||2}×${dim.height||3}厘米`, {
         font: '12px Microsoft YaHei', color: '#94a3b8'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtCuboid);
     } else if (solid === 'cylinder') {
       const r = Math.min(50, (dim.radius || 2) * 14);
       const h = Math.min(60, (dim.height || 4) * 10);
@@ -604,9 +622,10 @@ export default class GeometryScene extends Phaser.Scene {
       g.lineTo(cx + r, cy + h / 2);
       g.strokePath();
 
-      this.add.text(cx, cy + h / 2 + 18, `r=${dim.radius||2} h=${dim.height||4}`, {
+      const txtCyl = this.add.text(cx, cy + h / 2 + 18, `r=${dim.radius||2} h=${dim.height||4}`, {
         font: '12px Microsoft YaHei', color: '#94a3b8'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtCyl);
     } else if (solid === 'cone') {
       const r = Math.min(50, (dim.radius || 2) * 14);
       const h = Math.min(60, (dim.height || 4) * 10);
@@ -621,9 +640,10 @@ export default class GeometryScene extends Phaser.Scene {
       g.lineTo(cx + r, cy + h / 2);
       g.strokePath();
 
-      this.add.text(cx, cy + h / 2 + 18, `r=${dim.radius||2} h=${dim.height||4}`, {
+      const txtCone = this.add.text(cx, cy + h / 2 + 18, `r=${dim.radius||2} h=${dim.height||4}`, {
         font: '12px Microsoft YaHei', color: '#94a3b8'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtCone);
     }
 
     this._modeGraphics.push(g);
@@ -657,9 +677,10 @@ export default class GeometryScene extends Phaser.Scene {
       g.fillStyle(0xffffff);
       g.fillCircle(cx, cy, 3);
       // 标签
-      this.add.text((cx + endX) / 2, cy - 12, `r=${r}厘米`, {
+      const txtR = this.add.text((cx + endX) / 2, cy - 12, `r=${r}厘米`, {
         font: '13px Microsoft YaHei', color: '#f472b6'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtR);
 
       // 画直径
       const dEndX = cx + radius;
@@ -668,9 +689,10 @@ export default class GeometryScene extends Phaser.Scene {
       g.moveTo(cx - dEndX + cx, cy);
       g.lineTo(dEndX, cy);
       g.strokePath();
-      this.add.text(cx, cy - 25, `d=${data.diameter || r*2}厘米`, {
+      const txtD = this.add.text(cx, cy - 25, `d=${data.diameter || r*2}厘米`, {
         font: '13px Microsoft YaHei', color: '#4ade80'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtD);
     } else if (subType === 'circumference') {
       // 画圆周标注
       g.lineStyle(2, 0xf472b6);
@@ -684,9 +706,10 @@ export default class GeometryScene extends Phaser.Scene {
         else g.lineTo(px, py);
       }
       g.strokePath();
-      this.add.text(cx, cy + radius + 20, `C=2πr`, {
+      const txtC = this.add.text(cx, cy + radius + 20, `C=2πr`, {
         font: '14px Microsoft YaHei', color: '#f472b6'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtC);
 
       // 半径
       g.lineStyle(2, 0x60a5fa);
@@ -694,9 +717,10 @@ export default class GeometryScene extends Phaser.Scene {
       g.moveTo(cx, cy);
       g.lineTo(cx + radius, cy);
       g.strokePath();
-      this.add.text(cx + radius / 2, cy - 12, 'r', {
+      const txtR2 = this.add.text(cx + radius / 2, cy - 12, 'r', {
         font: '13px Microsoft YaHei', color: '#60a5fa'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtR2);
 
       g.fillStyle(0xffffff);
       g.fillCircle(cx, cy, 3);
@@ -781,9 +805,10 @@ export default class GeometryScene extends Phaser.Scene {
       g.moveTo(cx, cy + bs + 20);
       g.lineTo(cx + 6, cy + bs + 14);
       g.strokePath();
-      this.add.text(cx, cy + bs + 28, '正面→', {
+      const txtFront = this.add.text(cx, cy + bs + 28, '正面→', {
         font: '12px Microsoft YaHei', color: '#f472b6'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtFront);
     } else if (direction === '侧面') {
       g.beginPath();
       g.moveTo(cx + bs + 5, cy);
@@ -792,9 +817,10 @@ export default class GeometryScene extends Phaser.Scene {
       g.moveTo(cx + bs + 25, cy);
       g.lineTo(cx + bs + 19, cy + 6);
       g.strokePath();
-      this.add.text(cx + bs + 30, cy, '→侧面', {
+      const txtSide = this.add.text(cx + bs + 30, cy, '→侧面', {
         font: '12px Microsoft YaHei', color: '#4ade80'
       }).setOrigin(0, 0.5);
+      this._modeGraphics.push(txtSide);
     } else {
       g.beginPath();
       g.moveTo(cx, cy - bs - 5);
@@ -803,9 +829,10 @@ export default class GeometryScene extends Phaser.Scene {
       g.moveTo(cx, cy - bs - 25);
       g.lineTo(cx + 6, cy - bs - 19);
       g.strokePath();
-      this.add.text(cx, cy - bs - 30, '上面→', {
+      const txtTop = this.add.text(cx, cy - bs - 30, '上面→', {
         font: '12px Microsoft YaHei', color: '#fbbf24'
       }).setOrigin(0.5);
+      this._modeGraphics.push(txtTop);
     }
 
     this._modeGraphics.push(g);
@@ -942,8 +969,11 @@ export default class GeometryScene extends Phaser.Scene {
     btnBg.on('pointerdown', () => {
       if (this.onComplete) {
         this.onComplete({ score: this.score, correctCount: this.correctCount, total: this.totalQuestions });
+        // onComplete triggers handleGameComplete → destroyGame → game.destroy(true),
+        // which fully destroys the Phaser game including all scenes
+      } else {
+        this.scene.stop('GeometryScene');
       }
-      this.scene.stop('GeometryScene');
     });
   }
 }

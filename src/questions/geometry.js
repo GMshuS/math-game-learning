@@ -4,7 +4,7 @@
  *   - geometry_perimeter  — 周长计算
  *   - geometry_area       — 面积计算
  *   - geometry_volume     — 体积计算
- *   - geometry_surface    — 表面积计算（knowledgeId 映射到 geometry_volume）
+ *   - geometry_surface    — 表面积计算
  *   - geometry_angle      — 角度计算
  *   - geometry_shape      — 图形认知/圆的认识/图形变换（三合一，随机选题型）
  *
@@ -13,23 +13,12 @@
  * 模块导入时自动注册到题型注册表。
  */
 import { register } from './registry';
-import { randomInt } from './_helpers';
+import { randomInt, pick } from './_helpers';
 import {
-  planeFigures, solidFigures,
-  getPlaneFiguresForGrade, getSolidFiguresForGrade,
-  getPlaneFigureById, getSolidFigureById
+  getPlaneFiguresForGrade, getSolidFiguresForGrade
 } from '../config/geometry';
 
 // ────────────────────────────── 工具函数 ──────────────────────────────
-
-/**
- * 从数组中随机取一个元素
- * @param {Array} arr
- * @returns {*}
- */
-function pickRandom(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
 
 /**
  * 生成选择题干扰选项（正确值 ± 偏移，保证无重复且不含正确答案）
@@ -112,7 +101,7 @@ function generatePerimeter(grade, _range) {
     };
   }
 
-  const shape = pickRandom(shapes);
+  const shape = pick(shapes);
   let question, answer;
 
   switch (shape.id) {
@@ -211,7 +200,7 @@ function generateArea(grade, _range) {
     ? ['square', 'rectangle', 'triangle', 'parallelogram']
     : ['square', 'rectangle', 'triangle', 'parallelogram', 'trapezoid', 'circle'];
 
-  const areaType = pickRandom(typePool);
+  const areaType = pick(typePool);
   let question, answer;
 
   switch (areaType) {
@@ -289,7 +278,7 @@ function generateVolume(grade, _range) {
     };
   }
 
-  const solid = pickRandom(solids);
+  const solid = pick(solids);
   let question, answer;
 
   switch (solid.id) {
@@ -347,12 +336,12 @@ function generateSurface(grade, _range) {
       question: '一个正方体的棱长是 4 厘米，它的表面积是多少平方厘米？',
       answer: 96,
       type: 'geometry_surface',
-      knowledgeId: 'geometry_volume',
+      knowledgeId: 'geometry_surface',
       options: buildOptions(96, 3)
     };
   }
 
-  const solid = pickRandom(solids);
+  const solid = pick(solids);
   let question, answer;
 
   switch (solid.id) {
@@ -381,7 +370,7 @@ function generateSurface(grade, _range) {
     question,
     answer,
     type: 'geometry_surface',
-    knowledgeId: 'geometry_volume',
+    knowledgeId: 'geometry_surface',
     options: buildOptions(answer, 3, Math.max(1, Math.floor(answer * 0.3)))
   };
 }
@@ -399,7 +388,7 @@ function generateAngle(grade, _range) {
   if (grade >= 5) {
     angleTypes.push('polygon');
   }
-  const angleType = pickRandom(angleTypes);
+  const angleType = pick(angleTypes);
   let question, answer;
 
   switch (angleType) {
@@ -431,7 +420,7 @@ function generateAngle(grade, _range) {
       break;
     }
     case 'polygon': {
-      const sides = pickRandom([4, 5, 6, 8]);
+      const sides = pick([4, 5, 6, 8]);
       answer = 180 * (sides - 2);
       const polygonName = sides === 4 ? '四边' : sides === 5 ? '五边' : sides === 6 ? '六边' : '八边';
       question = `一个${polygonName}形的内角和是多少度？`;
@@ -439,8 +428,9 @@ function generateAngle(grade, _range) {
     }
     default: {
       const a = randomInt(40, 70);
-      answer = 180 - a - randomInt(30, 60);
-      question = `三角形中，一个角是 ${a}°，另一个角是 ${randomInt(30, 60)}°，第三个角是多少度？`;
+      const b = randomInt(30, 60);
+      answer = 180 - a - b;
+      question = `三角形中，一个角是 ${a}°，另一个角是 ${b}°，第三个角是多少度？`;
     }
   }
 
@@ -477,13 +467,13 @@ function generateShape(grade, _range) {
     subTypes.push('transform');
   }
 
-  const subType = pickRandom(subTypes);
+  const subType = pick(subTypes);
 
   switch (subType) {
     // ── 图形认知 ──
     case 'shape': {
       const shapes = getPlaneFiguresForGrade(grade);
-      const shape = pickRandom(shapes);
+      const shape = pick(shapes);
       const questions = [
         {
           q: `下列哪个图形有 ${shape.sides} 条边？`,
@@ -498,18 +488,18 @@ function generateShape(grade, _range) {
       ];
       // 如果有属性描述，额外增加属性题
       if (shape.properties && shape.properties.length > 0) {
-        const prop = pickRandom(shape.properties);
+        const prop = pick(shape.properties);
         questions.push({
           q: `"${prop}" 是哪个图形的特征？`,
           correct: shape.name,
           distractors: shapes.filter(s => s.id !== shape.id).slice(0, 3).map(s => s.name)
         });
       }
-      const q = pickRandom(questions);
+      const q = pick(questions);
       // 如果干扰项不够，填充其他图形
-      const allPlaneNames = planeFigures.map(s => s.name).filter(n => n !== q.correct);
+      const allPlaneNames = shapes.map(s => s.name).filter(n => n !== q.correct);
       while (q.distractors.length < 3) {
-        const filler = pickRandom(allPlaneNames);
+        const filler = pick(allPlaneNames);
         if (!q.distractors.includes(filler)) {
           q.distractors.push(filler);
         }
@@ -563,7 +553,7 @@ function generateShape(grade, _range) {
         correct: String(Math.round(2 * 3.14 * r)),
         distractors: [String(Math.round(3.14 * r)), String(Math.round(3.14 * r * r)), String(r * 2)]
       });
-      const q = pickRandom(circleQuestions);
+      const q = pick(circleQuestions);
       return {
         question: q.q,
         answer: q.correct,
@@ -612,7 +602,7 @@ function generateShape(grade, _range) {
           distractors: ['位置', '方向', '颜色']
         }
       ];
-      const q = pickRandom(transformQuestions);
+      const q = pick(transformQuestions);
       return {
         question: q.q,
         answer: q.correct,

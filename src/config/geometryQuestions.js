@@ -38,7 +38,7 @@ export function generateIdentifyQuestion(grade) {
   if (questionType === 'nameToSides') {
     // 给出图形名，问边数
     const answer = figure.sides;
-    const wrongOptions = generateWrongSideOptions(answer, figure.id);
+    const wrongOptions = generateWrongSideOptions(answer);
     const choices = shuffle([answer, ...wrongOptions]);
 
     return {
@@ -57,9 +57,10 @@ export function generateIdentifyQuestion(grade) {
       : null;
 
     if (!correctProperty) {
+      console.warn(`[Geometry] Figure "${figure.name}" has no properties, degrading to side-count question`);
       // 降级到边数题
       const answer = figure.sides;
-      const wrongOptions = generateWrongSideOptions(answer, figure.id);
+      const wrongOptions = generateWrongSideOptions(answer);
       const choices = shuffle([answer, ...wrongOptions]);
       return {
         question: `"${figure.name}" 有几条边？`,
@@ -72,7 +73,7 @@ export function generateIdentifyQuestion(grade) {
       };
     }
 
-    const wrongProperties = generateWrongProperties(correctProperty, figure.id);
+    const wrongProperties = generateWrongProperties(correctProperty);
     const choices = shuffle([correctProperty, ...wrongProperties]);
 
     return {
@@ -90,15 +91,15 @@ export function generateIdentifyQuestion(grade) {
 /**
  * 生成错误的边数选项
  */
-function generateWrongSideOptions(correct, _figureId) {
-  const pool = [0, 3, 4, 5, 6, 8].filter(n => n !== correct);
+function generateWrongSideOptions(correct) {
+  const pool = [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12].filter(n => n !== correct);
   return pool.slice(0, 3);
 }
 
 /**
  * 生成错误的属性选项
  */
-function generateWrongProperties(correct, _figureId) {
+function generateWrongProperties(correct) {
   const allProperties = [
     '等边', '等角', '平行', '对边相等', '对边平行',
     '对角相等', '无角', '一个直角', '两边相等',
@@ -187,8 +188,8 @@ export function generatePropertyQuestion(grade) {
 function generateWrongNumericOptions(correct, count) {
   if (typeof correct === 'string') {
     // 非数字答案（如"无数条"）
-    const pool = ['0', '1', '2', '3', '4', '5', '6', '8', '12'];
-    return shuffle(pool.filter(p => p !== correct)).slice(0, count).map(Number);
+    const pool = ['0', '1', '2', '3', '4', '5', '6', '8', '12', '无数条'];
+    return shuffle(pool.filter(p => p !== correct)).slice(0, count);
   }
   const pool = [0, 1, 2, 3, 4, 5, 6, 8, 12, 999].filter(n => n !== correct);
   return shuffle(pool).slice(0, count);
@@ -263,7 +264,10 @@ export function generateTriangleQuestion(_grade) {
       answer + randomInt(4, 7)
     ].filter(n => n > 0 && !valid.includes(n));
     while (wrongOptions.length < 3) {
-      wrongOptions.push(randomInt(1, 20));
+      const fill = randomInt(1, 20);
+      if (!valid.includes(fill) && !wrongOptions.includes(fill)) {
+        wrongOptions.push(fill);
+      }
     }
     const choices = shuffle([answer, ...wrongOptions.slice(0, 3)]);
 
@@ -403,7 +407,9 @@ export function generateAreaQuestion(grade) {
     // 三角形面积 = base * height / 2
     const base = randomInt(4, 12);
     const height = randomInt(4, 12);
-    const answer = Math.floor((base * height) / 2);
+    // 确保结果为精确值（不截断小数）
+    const product = base * height;
+    const answer = product % 2 === 0 ? product / 2 : Math.round(product / 2 * 10) / 10;
 
     const wrongOptions = generateWrongNumericOptions(answer, 3);
     const choices = shuffle([answer, ...wrongOptions]);
@@ -442,7 +448,8 @@ export function generateAreaQuestion(grade) {
     const a = randomInt(4, 10);
     const b = randomInt(4, 10);
     const h = randomInt(3, 8);
-    const answer = Math.floor((a + b) * h / 2);
+    const sum = a + b;
+    const answer = (sum * h) % 2 === 0 ? (sum * h) / 2 : Math.round((sum * h) / 2 * 10) / 10;
 
     const wrongOptions = generateWrongNumericOptions(answer, 3);
     const choices = shuffle([answer, ...wrongOptions]);
@@ -798,7 +805,8 @@ export function generateViewQuestion(_grade) {
   const wrongViews = viewDirections
     .filter(d => d !== direction)
     .map(d => struct[d]);
-  const otherStruct = structures[(structures.indexOf(struct) + 1 + Math.floor(Math.random() * (structures.length - 1))) % structures.length];
+  const structIndex = structures.findIndex(s => s.name === struct.name);
+  const otherStruct = structures[(structIndex + 1 + Math.floor(Math.random() * (structures.length - 1))) % structures.length];
   const wrongPool = [...wrongViews, otherStruct[direction]];
 
   const wrongOptions = shuffle(wrongPool).slice(0, 3);
