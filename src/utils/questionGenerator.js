@@ -15,6 +15,7 @@ import { randomInt } from '../questions/_helpers';
 import { useCustomTemplateStore } from '../store/customTemplateStore';
 import { generate as generateCustomQuestion, getCustomWeight } from './customTemplateGenerator';
 import { mergeWeightsForRange, getAvailableTypesForRange } from './gradeRangeWeights';
+import { generate as generateScenario } from '../questions/scenarios/index.js';
 
 // 显式导入所有题型生成器（非 side-effect import，避免 tree-shaking 移除）
 import generateAddition from '../questions/addition';
@@ -64,6 +65,7 @@ register('patternFind', generatePatternFind);
 register('averageCalc', generateAverageCalc);
 register('negativeNumber', generateNegativeNumber);
 register('ratioProportion', generateRatioProportion);
+register('scenario', generateScenario);
 
 /**
  * 加权随机选择
