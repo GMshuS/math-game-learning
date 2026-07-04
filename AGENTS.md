@@ -2,12 +2,11 @@
 
 ## Working directory
 
-All app code and commands live in `math-game-learning/`. Run `cd math-game-learning` before any dev commands.
+All app code and commands live in `game-learning/`.
 
 ## Commands
 
 ```bash
-cd math-game-learning
 npm install       # install deps
 npm run dev       # dev server on :3000, auto-opens browser
 npm run build     # production build → dist/

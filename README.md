@@ -55,7 +55,7 @@ npm run preview
 ## 项目结构
 
 ```
-math-game-learning/
+game-learning/
 ├── src/
 │   ├── main.js              # 应用入口
 │   ├── App.vue              # 根组件
