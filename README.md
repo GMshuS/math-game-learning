@@ -55,19 +55,18 @@ npm run preview
 ## 项目结构
 
 ```
-game-learning/
-├── src/
-│   ├── main.js              # 应用入口
-│   ├── App.vue              # 根组件
-│   ├── config/              # 配置文件
-│   │   ├── game.js          # 游戏配置
-│   │   └── grades.js        # 年级配置
-│   ├── scenes/              # Phaser 场景
-│   ├── components/          # Vue 组件
-│   ├── store/               # 状态管理
-│   ├── utils/               # 工具函数
-│   ├── assets/              # 静态资源
-│   └── styles/              # 样式文件
+src/
+├── main.js              # 应用入口
+├── App.vue              # 根组件
+├── config/              # 配置文件
+│   ├── game.js          # 游戏配置
+│   └── grades.js        # 年级配置
+├── scenes/              # Phaser 场景
+├── components/          # Vue 组件
+├── store/               # 状态管理
+├── utils/               # 工具函数
+├── assets/              # 静态资源
+└── styles/              # 样式文件
 ├── public/                  # 公共静态资源
 ├── index.html               # HTML 入口
 ├── vite.config.js           # Vite 配置

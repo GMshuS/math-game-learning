@@ -2,8 +2,6 @@
 
 ## Working directory
 
-All app code and commands live in `game-learning/`.
-
 ## Commands
 
 ```bash
