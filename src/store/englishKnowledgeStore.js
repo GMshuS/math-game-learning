@@ -44,9 +44,9 @@ export const useEnglishKnowledgeStore = defineStore('englishKnowledge', {
      */
     init() {
       try {
-        const data = localStorage.getItem(STORAGE_KEYS.ENGLISH_KNOWLEDGE);
+        const data = storageManager._loadOptionalData(STORAGE_KEYS.ENGLISH_KNOWLEDGE, 'englishKnowledge');
         if (data) {
-          this.records = JSON.parse(data);
+          this.records = data;
         }
       } catch (e) {
         console.warn('加载英语知识记录失败:', e.message);

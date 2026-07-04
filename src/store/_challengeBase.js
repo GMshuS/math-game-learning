@@ -76,8 +76,8 @@ export function baseStartGame(ctx, config, mode, generateFn) {
  * 创建 answer 公共逻辑
  * @param {object} ctx - store 实例 (this)
  * @param {boolean} isCorrect - 答案是否正确
- * @param {Function} onCorrect - 正确时的额外回调
- * @param {Function} onWrong - 错误时的额外回调
+ * @param {Function} onCorrect - 正确时的额外回调（blitz 模式调用）
+ * @param {Function} onWrong - 错误时的额外回调（仅在 survival 模式 lives<=0 时调用）
  * @param {Function} generateFn - 题目生成函数
  * @returns {boolean} 是否正确
  */

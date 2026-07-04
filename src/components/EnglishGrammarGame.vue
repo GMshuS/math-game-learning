@@ -21,6 +21,7 @@
         <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
       </div>
       <div class="status-right">
+        <button class="btn-back-sm" @click="goBack">← 返回</button>
         <span class="score-display">⭐ {{ grammarStore.score }}</span>
         <span v-if="grammarStore.combo > 1" class="combo-display">🔥 x{{ grammarStore.combo }}</span>
       </div>
@@ -40,6 +41,9 @@
 
     <!-- ========== 教学关 ========== -->
     <div v-if="grammarStore.gamePhase === 'tutorial'" class="tutorial-view">
+      <div class="tutorial-top-bar">
+        <button class="btn-back-sm" @click="goBack">← 返回</button>
+      </div>
       <div class="tutorial-header">
         <span class="tutorial-icon">📖</span>
         <h3>{{ currentTutorial.title }}</h3>
@@ -331,9 +335,12 @@
             <span class="stat-value combo">{{ grammarStore.maxCombo }}</span>
           </div>
         </div>
-        <button class="btn-next-floor" @click="goNextFloor">
-          下一层 →
-        </button>
+        <div class="floor-result-actions">
+          <button class="btn-next-floor" @click="goNextFloor">
+            下一层 →
+          </button>
+          <button class="btn-back-castle" @click="goBack">🏰 返回城堡</button>
+        </div>
       </div>
     </div>
 
@@ -1744,6 +1751,22 @@ onUnmounted(() => {
   box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
 }
 
+.btn-back-sm {
+  padding: 0.35rem 0.9rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 16px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-back-sm:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 .btn-back-castle {
   background: rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1754,11 +1777,19 @@ onUnmounted(() => {
 }
 
 .victory-actions,
-.fail-actions {
+.fail-actions,
+.floor-result-actions {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+.tutorial-top-bar {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 0.5rem;
 }
 
 /* ========== 空态 ========== */

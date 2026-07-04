@@ -7,8 +7,8 @@
       @close="closeTutorial"
     />
 
-    <!-- 模式选择 -->
-    <div v-if="!store.isPlaying && !store.gameResult" class="mode-select">
+    <!-- 模式选择（仅 game 模式显示） -->
+    <div v-if="practiceMode === 'game' && !store.isPlaying && !store.gameResult" class="mode-select">
       <div class="header">
         <div class="header-left">
           <h2>⚡ 单词速拼</h2>
@@ -42,33 +42,102 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 游戏中 -->
-    <div v-else-if="store.isPlaying" class="game-area">
-      <div class="game-header">
-        <div v-if="store.currentMode !== 'survival'" class="timer" :class="{ warning: store.timeLeft <= 10 }">
-          ⏱️ {{ store.timeLeft }}s
-        </div>
-        <div v-if="store.currentMode === 'survival'" class="timer survival-timer">
-          ♾️ 无限时
-        </div>
-        <div class="score">得分: {{ store.score }}</div>
-        <div v-if="store.combo > 1" class="combo">🔥 {{ store.combo }}连击</div>
-        <div v-if="store.currentMode === 'survival'" class="lives">
-          ❤️ {{ filledHearts }}{{ emptyHearts }}
-        </div>
-        <div v-if="store.currentMode === 'blitz'" class="ai-bar">
-          <div class="ai-label">AI 对手</div>
-          <div class="ai-progress-bar">
-            <div class="ai-fill" :style="{ width: store.aiProgress + '%' }" />
+      <!-- 专项训练 -->
+      <div class="practice-section">
+        <h3 class="section-subtitle">🏋️ 专项训练</h3>
+        <div class="mode-cards">
+          <div class="mode-card practice-card" @click="startPractice('translation')">
+            <div class="mode-icon">🔄</div>
+            <h3>中英互译</h3>
+            <p>看英文选中文/看中文选英文</p>
+          </div>
+          <div class="mode-card practice-card" @click="startPractice('listening')">
+            <div class="mode-icon">🔊</div>
+            <h3>听力训练</h3>
+            <p>听发音选择正确释义</p>
+          </div>
+          <div class="mode-card practice-card" @click="startPractice('reading')">
+            <div class="mode-icon">🎤</div>
+            <h3>跟读训练</h3>
+            <p>跟读评分，纠正发音</p>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- 阅读模式（reading）- 跟读界面 -->
+    <div v-if="practiceMode === 'reading' && !store.isPlaying && !showVoiceCompare" class="reading-area">
+      <div class="header">
+        <div class="header-left">
+          <h2>🎤 跟读训练</h2>
+          <p class="level-info">
+            Level {{ effectiveLevel }} · {{ levelTheme }}
+          </p>
+        </div>
+        <div class="header-actions">
+          <button class="btn-back" @click="$emit('back')">← 返回</button>
+        </div>
+      </div>
+      <div class="reading-content">
+        <p class="reading-label">朗读下面的单词或句子：</p>
+        <div class="reading-text">{{ readingText }}</div>
+        <button class="btn-start-reading" @click="openVoiceCompare">
+          🎤 开始跟读
+        </button>
+      </div>
+    </div>
+
+    <!-- 阅读模式 - 语音跟读组件 -->
+    <div v-else-if="practiceMode === 'reading' && showVoiceCompare" class="voice-compare-wrapper">
+      <div class="header">
+        <div class="header-left">
+          <h2>🎤 语音跟读</h2>
+        </div>
+        <div class="header-actions">
+          <button class="btn-back" @click="closeVoiceCompare">← 返回文本</button>
+        </div>
+      </div>
+      <EnglishVoiceCompare
+        :expected-text="readingText"
+        :auto-start="true"
+        @complete="onVoiceComplete"
+        @skip="onVoiceSkip"
+      />
+    </div>
+
+    <!-- 答题模式（game / translation / listening） -->
+    <div v-else-if="store.isPlaying" class="game-area">
+      <div class="game-header">
+        <!-- game 模式显示计时器/分数/连击/生命值/AI -->
+        <template v-if="practiceMode === 'game'">
+          <div v-if="store.currentMode !== 'survival'" class="timer" :class="{ warning: store.timeLeft <= 10 }">
+            ⏱️ {{ store.timeLeft }}s
+          </div>
+          <div v-if="store.currentMode === 'survival'" class="timer survival-timer">
+            ♾️ 无限时
+          </div>
+          <div class="score">得分: {{ store.score }}</div>
+          <div v-if="store.combo > 1" class="combo">🔥 {{ store.combo }}连击</div>
+          <div v-if="store.currentMode === 'survival'" class="lives">
+            ❤️ {{ filledHearts }}{{ emptyHearts }}
+          </div>
+          <div v-if="store.currentMode === 'blitz'" class="ai-bar">
+            <div class="ai-label">AI 对手</div>
+            <div class="ai-progress-bar">
+              <div class="ai-fill" :style="{ width: store.aiProgress + '%' }" />
+            </div>
+          </div>
+        </template>
+        <!-- translation/listening 模式显示简洁头部 -->
+        <template v-else>
+          <span class="practice-title">{{ practiceMode === 'translation' ? '🔄 中英互译' : '🔊 听力训练' }}</span>
+        </template>
         <button class="btn-back" @click="goBackFromGame">← 返回</button>
       </div>
 
       <div class="question-area">
-        <!-- 听音题型 -->
+        <!-- 听音题型（game模式+listening训练） -->
         <div v-if="store.currentQuestion?.type === 'listening'" class="question listening">
           <button
             class="btn-listen"
@@ -78,15 +147,16 @@
             🔊
           </button>
           <span class="listen-hint">请选择对应的释义</span>
+          <div v-if="practiceMode === 'listening'" class="question-hint">点击播放，选择正确的答案</div>
         </div>
 
-        <!-- en2cn 题型 -->
+        <!-- en2cn 题型（game模式+translation训练） -->
         <div v-else-if="store.currentQuestion?.type === 'en2cn'" class="question">
           <span class="word-en">{{ store.currentQuestion?.word?.en }}</span>
           <span class="question-hint">选择正确的中文释义</span>
         </div>
 
-        <!-- cn2en 题型 -->
+        <!-- cn2en 题型（game模式+translation训练） -->
         <div v-else-if="store.currentQuestion?.type === 'cn2en'" class="question">
           <span class="word-cn">{{ store.currentQuestion?.word?.cn }}</span>
           <span class="question-hint">选择正确的英文单词</span>
@@ -110,7 +180,12 @@
         </div>
 
         <!-- Progress indicator -->
-        <div class="progress-info">
+        <div v-if="practiceMode === 'game'" class="progress-info">
+          已答: {{ store.correctCount + store.wrongCount }}题
+          · 正确: {{ store.correctCount }}
+          · 错误: {{ store.wrongCount }}
+        </div>
+        <div v-else class="progress-info practice-progress">
           已答: {{ store.correctCount + store.wrongCount }}题
           · 正确: {{ store.correctCount }}
           · 错误: {{ store.wrongCount }}
@@ -118,8 +193,8 @@
       </div>
     </div>
 
-    <!-- 结算 -->
-    <div v-else-if="store.gameResult" class="result-area">
+    <!-- 结算（仅 game 模式） -->
+    <div v-else-if="practiceMode === 'game' && store.gameResult" class="result-area">
       <h2>🏁 挑战结束</h2>
       <div class="result-stats">
         <div class="stat">
@@ -127,7 +202,7 @@
           <div class="stat-label">得分</div>
         </div>
         <div class="stat">
-          <div class="stat-value rating-{{ store.gameResult.rating.toLowerCase() }}">{{ store.gameResult.rating }}</div>
+          <div class="stat-value">{{ store.gameResult.rating }}</div>
           <div class="stat-label">评级</div>
         </div>
         <div class="stat">
@@ -151,12 +226,14 @@
         <button class="btn-back-result" @click="goBackToModeSelect">返回模式选择</button>
       </div>
     </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import GameTutorial from './GameTutorial.vue';
+import EnglishVoiceCompare from './EnglishVoiceCompare.vue';
 import { useEnglishSpeedSpellStore } from '../store/englishSpeedSpellStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useGameStore } from '../store/gameStore';
@@ -164,8 +241,17 @@ import { englishGradesConfig } from '../config/english/grades';
 import { speedSpellConfig } from '../config/english/speedSpell';
 import englishSpeech from '../utils/englishSpeech';
 
-const emit = defineEmits(['back', 'challengeEnd']);
+const props = defineProps({
+  practiceMode: {
+    type: String,
+    default: 'game',
+    validator: v => ['game', 'translation', 'listening', 'reading'].includes(v)
+  }
+});
 
+const emit = defineEmits(['back', 'challengeEnd', 'startReading', 'startPractice']);
+
+// 非游戏模式直接显示答题界面，不需要 Tutorial 和模式选择
 const showTutorial = ref(false);
 
 const tutorialSteps = [
@@ -209,7 +295,103 @@ const isSpeaking = ref(false);      // 语音是否正在播放
 const feedbackTimer = ref(null);    // 反馈延迟定时器
 const hasEmittedEnd = ref(false);   // 防止双重发射
 
-// 等级信息
+// ====== 专项训练模式 ======
+const readingText = ref('');
+const showVoiceCompare = ref(false);
+
+// 根据 practiceMode 自动启动
+watch(() => props.practiceMode, (mode) => {
+  if (mode !== 'game') {
+    startPracticeMode(mode);
+  }
+}, { immediate: true });
+
+function startPracticeMode(mode) {
+  hasEmittedEnd.value = false;
+  feedbackState.value = null;
+  feedbackIndex.value = -1;
+  isLocked.value = false;
+
+  if (mode === 'reading') {
+    // reading 模式：从 grades 取当前等级的句子
+    const level = effectiveLevel.value;
+    const grade = englishGradesConfig[level];
+    if (grade && grade.words.length > 0) {
+      const wordsWithSentence = grade.words.filter(w => w.sentence);
+      if (wordsWithSentence.length > 0) {
+        const idx = Math.floor(Math.random() * wordsWithSentence.length);
+        readingText.value = wordsWithSentence[idx].sentence || wordsWithSentence[idx].en;
+      } else {
+        readingText.value = grade.words[0].en;
+      }
+    } else {
+      readingText.value = 'Hello, how are you?';
+    }
+    return;
+  }
+
+  // translation / listening 模式：直接启动 Store，不启动计时器
+  const modeId = 'base';
+  store.startGame(modeId);
+}
+
+// ====== 阅读模式 - 语音跟读控制 ======
+function openVoiceCompare() {
+  showVoiceCompare.value = true;
+}
+
+function closeVoiceCompare() {
+  showVoiceCompare.value = false;
+}
+
+function onVoiceComplete(_result) {
+  showVoiceCompare.value = false;
+}
+
+function onVoiceSkip() {
+  showVoiceCompare.value = false;
+}
+
+// 监听 currentQuestion，过滤题型：translation 模式只保留 en2cn/cn2en，listening 模式只保留 listening
+watch(() => store.currentQuestion?.type, (newType) => {
+  if (practiceMode === 'game' || !newType || !store.isPlaying) return;
+
+  if (practiceMode === 'translation' && newType === 'listening') {
+    // translation 模式下遇到 listening 题型，重新生成
+    store.generateQuestion();
+  } else if (practiceMode === 'listening' && newType !== 'listening') {
+    // listening 模式下遇到非 listening 题型，重新生成
+    store.generateQuestion();
+  }
+});
+
+// 重写 handleAnswer 以支持 practice 模式
+function handlePracticeAnswer(index) {
+  if (isLocked.value || !store.currentQuestion) return;
+
+  isLocked.value = true;
+  feedbackIndex.value = index;
+
+  const isCorrect = store.answer(index);
+
+  if (isCorrect) {
+    feedbackState.value = 'correct';
+  } else {
+    feedbackState.value = 'wrong';
+  }
+
+  // translation/listening 模式下：延迟后自动下一题，不写成绩
+  const delay = isCorrect ? 400 : 700;
+  feedbackTimer.value = setTimeout(() => {
+    feedbackTimer.value = null;
+    feedbackState.value = null;
+    feedbackIndex.value = -1;
+    isLocked.value = false;
+    // 不触发 emit
+  }, delay);
+}
+
+// ====== 等级信息 ======
 const effectiveLevel = computed(() => settingsStore.getEffectiveEnglishLevel);
 
 const levelTheme = computed(() => {
@@ -259,6 +441,12 @@ function startMode(modeId) {
  * @param {number} index
  */
 function handleAnswer(index) {
+  if (practiceMode !== 'game') {
+    // translation/listening 模式：简单反馈，不写成绩
+    handlePracticeAnswer(index);
+    return;
+  }
+
   if (isLocked.value || !store.currentQuestion) return;
 
   isLocked.value = true;
@@ -361,6 +549,18 @@ function goBackToModeSelect() {
   stopTimer();
   englishSpeech.stop();
   store.$reset();
+}
+
+/**
+ * 启动专项训练模式
+ * @param {string} mode - 'translation' | 'listening' | 'reading'
+ */
+function startPractice(mode) {
+  if (mode === 'reading') {
+    emit('startReading');
+    return;
+  }
+  emit('startPractice', mode);
 }
 
 onMounted(() => {
@@ -499,6 +699,116 @@ onUnmounted(() => {
 
 .mode-best.empty {
   color: rgba(255, 255, 255, 0.35);
+}
+
+/* 专项训练区域 */
+.practice-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.section-subtitle {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  opacity: 0.7;
+  font-weight: 600;
+}
+
+.practice-card {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.practice-card:hover {
+  border-color: #fbbf24;
+  box-shadow: 0 8px 25px rgba(251, 191, 36, 0.15);
+}
+
+/* ========== 阅读模式 ========== */
+.reading-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.voice-compare-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.reading-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.reading-label {
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+
+.reading-text {
+  font-size: 2.8rem;
+  font-weight: bold;
+  color: #5eead4;
+  text-align: center;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  max-width: 80%;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.btn-start-reading {
+  padding: 1rem 2.5rem;
+  font-size: 1.3rem;
+  font-weight: bold;
+  background: linear-gradient(135deg, #06b6d4, #10b981);
+  border: none;
+  border-radius: 30px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-start-reading:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+/* ========== 练习完成 ========== */
+.practice-done {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  text-align: center;
+}
+
+.practice-done h2 {
+  font-size: 2.5rem;
+}
+
+.practice-done p {
+  font-size: 1.2rem;
+  opacity: 0.7;
+}
+
+.practice-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.practice-progress {
+  opacity: 0.7;
 }
 
 /* ========== 游戏态 ========== */

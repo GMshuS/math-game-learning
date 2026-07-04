@@ -5,6 +5,9 @@
       <div class="header-left">
         <h3>🎤 语音跟读</h3>
       </div>
+      <div class="header-right">
+        <button class="btn-back" @click="handleSkip">← 返回</button>
+      </div>
     </div>
 
     <!-- 句子展示 -->
@@ -404,6 +407,27 @@ onUnmounted(() => {
   margin: 0;
   font-size: 1.4rem;
   color: #fbbf24;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-back {
+  padding: 0.4rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 18px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.btn-back:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* ========== 句子区域 ========== */

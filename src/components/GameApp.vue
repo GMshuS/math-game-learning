@@ -69,6 +69,7 @@ import storageManager from '../utils/storage';
 import audioManager from '../utils/audioManager';
 import adventureConfig from '../config/adventure';
 import { getGameConfig } from '../utils/gameContext';
+import { englishGradesConfig } from '../config/english/grades';
 
 // 始终加载的核心组件（首屏必需）
 import MainMenu from './MainMenu.vue';
@@ -108,6 +109,8 @@ const GeometryGame = defineAsyncComponent(() => import('./GeometryGame.vue'));
 const UnitGame = defineAsyncComponent(() => import('./UnitGame.vue'));
 const ChartGame = defineAsyncComponent(() => import('./ChartGame.vue'));
 const KnowledgeCenter = defineAsyncComponent(() => import('./KnowledgeCenter.vue'));
+const EnglishSpeakingArea = defineAsyncComponent(() => import('./EnglishSpeakingArea.vue'));
+const EnglishVoiceCompare = defineAsyncComponent(() => import('./EnglishVoiceCompare.vue'));
 
 const gameStore = useGameStore();
 const audioStore = useAudioStore();
@@ -188,6 +191,10 @@ const viewTitleMap = {
   englishAdventureMap: '英语冒险',
   englishSpiritCollection: '精灵收集',
   englishRegionBattle: '区域对战',
+  englishSpeaking: '口语专区',
+  englishTranslation: '中英互译',
+  englishListening: '听力训练',
+  englishReading: '跟读训练',
   // 卡牌世界子功能
   cardWorld: '卡牌世界',
   cardBattle: '卡牌对战',
@@ -231,7 +238,9 @@ const currentMode = computed(() => {
   if (currentView.value === 'englishHall' || currentView.value === 'englishSpeedSpell' ||
     currentView.value === 'englishGrammar' || currentView.value === 'englishGrammarGame' ||
     currentView.value === 'englishAdventureMap' || currentView.value === 'englishSpiritCollection' ||
-    currentView.value === 'englishRegionBattle') {
+    currentView.value === 'englishRegionBattle' || currentView.value === 'englishSpeaking' ||
+    currentView.value === 'englishTranslation' || currentView.value === 'englishListening' ||
+    currentView.value === 'englishReading') {
     return 'english';
   }
   if (currentView.value === 'admin') {
@@ -756,9 +765,57 @@ const goBackFromGrammarGame = () => {
   currentView.value = 'englishGrammar';
 };
 
+// ====== 英语专项训练导航 ======
+
+const startEnglishTranslation = () => {
+  previousView.value = currentView.value;
+  englishSpeedSpellStore.$reset();
+  currentView.value = 'englishTranslation';
+};
+
+const startEnglishListening = () => {
+  previousView.value = currentView.value;
+  englishSpeedSpellStore.$reset();
+  currentView.value = 'englishListening';
+};
+
+const startEnglishReading = () => {
+  previousView.value = currentView.value;
+  // 从当前等级选择一个有 sentence 的词汇作为跟读文本
+  const level = settingsStore.getEffectiveEnglishLevel || 1;
+  const grade = englishGradesConfig[level];
+  let text = '';
+  if (grade && grade.words && grade.words.length > 0) {
+    const wordsWithSentence = grade.words.filter(w => w.sentence);
+    if (wordsWithSentence.length > 0) {
+      const randomIndex = Math.floor(Math.random() * wordsWithSentence.length);
+      text = wordsWithSentence[randomIndex].sentence;
+    } else {
+      text = grade.words[0].en;
+    }
+  }
+  if (!text) {
+    text = 'Hello, how are you?';
+  }
+  currentReadingText.value = text;
+  currentView.value = 'englishReading';
+};
+
+const enterEnglishSpeaking = () => {
+  previousView.value = currentView.value;
+  currentView.value = 'englishSpeaking';
+};
+
+const enterSpeedSpellHall = () => {
+  previousView.value = currentView.value;
+  englishSpeedSpellStore.$reset();
+  currentView.value = 'englishSpeedSpell';
+};
+
 // ====== 英语冒险导航 ======
 
 const currentEnglishRegionId = ref(null);
+const currentReadingText = ref('');
 
 const startEnglishAdventure = () => {
   previousView.value = currentView.value;
@@ -1003,13 +1060,26 @@ const viewRegistry = {
       'startKnowledgeCenter': startKnowledgeCenter,
       'openAchievements': openAchievements,
       'openLeaderboard': openLeaderboard,
+      'startTranslation': startEnglishTranslation,
+      'startListening': startEnglishListening,
+      'startReading': startEnglishReading,
+      'enterSpeaking': enterEnglishSpeaking,
+      'enterSpeedSpellHall': enterSpeedSpellHall,
       back: goBack
     }
   },
   englishSpeedSpell: {
     component: EnglishSpeedSpell,
     props: () => ({}),
-    events: { back: goBack, 'challengeEnd': onSpellEnd }
+    events: {
+      back: goBack,
+      'challengeEnd': onSpellEnd,
+      'startPractice': (mode) => {
+        if (mode === 'translation') startEnglishTranslation();
+        else if (mode === 'listening') startEnglishListening();
+        else if (mode === 'reading') startEnglishReading();
+      }
+    }
   },
   englishGrammar: {
     component: EnglishGrammar,
@@ -1092,6 +1162,42 @@ const viewRegistry = {
         // 区域通关后回到冒险地图
         currentView.value = 'englishAdventureMap';
       }
+    }
+  },
+
+  // ====== 英语专项训练视图 ======
+
+  englishSpeaking: {
+    component: EnglishSpeakingArea,
+    props: () => ({}),
+    events: {
+      'enterTower': startGrammarTower,
+      'startReading': startEnglishReading,
+      back: goBack
+    }
+  },
+  englishTranslation: {
+    component: EnglishSpeedSpell,
+    props: () => ({
+      practiceMode: 'translation'
+    }),
+    events: { back: goBack }
+  },
+  englishListening: {
+    component: EnglishSpeedSpell,
+    props: () => ({
+      practiceMode: 'listening'
+    }),
+    events: { back: goBack }
+  },
+  englishReading: {
+    component: EnglishVoiceCompare,
+    props: () => ({
+      expectedText: currentReadingText.value
+    }),
+    events: {
+      'complete': goBack,
+      'skip': goBack
     }
   }
 };

@@ -16,102 +16,70 @@
       </div>
     </div>
 
-    <p class="subtitle">选择模式开始英语单词挑战！</p>
-
-    <!-- 模式卡片 -->
-    <div class="mode-cards">
-      <div
-        v-for="mode in modes"
-        :key="mode.id"
-        class="mode-card"
-        @click="$emit('startSpeedSpell', mode.id)"
+    <div class="hall-sections">
+      <section
+        v-for="section in sections"
+        :key="section.id"
+        class="hall-section"
       >
-        <div class="mode-icon">{{ mode.icon }}</div>
-        <h3>{{ mode.name }}</h3>
-        <p>{{ mode.description }}</p>
-        <div v-if="bestScores[mode.id]" class="mode-best">
-          最佳: {{ bestScores[mode.id].score }}分 ({{ bestScores[mode.id].rating }})
+        <!-- 分区标题（可折叠） -->
+        <div class="section-header" @click="toggleSection(section.id)">
+          <span class="section-title">{{ section.icon }} {{ section.label }}</span>
+          <span class="section-toggle">{{ expandedSections[section.id] ? '▼' : '▶' }}</span>
         </div>
-        <div v-else class="mode-best empty">
-          暂无记录
-        </div>
-      </div>
-    </div>
 
-    <!-- 冒险模式入口 -->
-    <div class="adventure-entrance" @click="$emit('startAdventure')">
-      <div class="entrance-icon">🕹️</div>
-      <h3>冒险模式</h3>
-      <p>探索英语世界，收集语法精灵！</p>
-      <div class="adventure-stats">
-        <div class="spirit-progress">
-          <div class="spirit-progress-bar">
+        <!-- 分区内容 -->
+        <div v-show="expandedSections[section.id]" class="section-items">
+          <template v-for="(item, index) in section.items" :key="item.id">
+            <!-- 单词速拼区的分割线 -->
             <div
-              class="spirit-progress-fill"
-              :style="{ width: spiritProgressPercent + '%' }"
-            />
-          </div>
-          <span class="spirit-progress-text">
-            收集进度: {{ spiritCollectedCount }}/{{ spiritTotalCount }}
-          </span>
+              v-if="section.id === 'vocabulary' && index > 0 && item.group !== section.items[index - 1]?.group"
+              class="section-divider"
+            >
+              <span class="divider-label">
+                {{ item.group === 'practice' ? '🏋️ 专项训练' : '🎮 游戏模式' }}
+              </span>
+            </div>
+
+            <!-- 卡片条目 -->
+            <div
+              class="hall-card"
+              @click="handleItemClick(item)"
+            >
+              <span class="card-icon">{{ item.icon }}</span>
+              <div class="card-body">
+                <span class="card-name">{{ item.name }}</span>
+                <span class="card-desc">{{ item.desc }}</span>
+              </div>
+              <span class="card-status">{{ getStatusText(item) }}</span>
+              <span class="card-arrow">›</span>
+            </div>
+          </template>
         </div>
-        <div v-if="currentRegionName" class="current-region">
-          当前区域: {{ currentRegionName }}
-        </div>
-      </div>
+      </section>
     </div>
-
-    <!-- 语法城堡入口 -->
-    <div class="grammar-entrance" @click="$emit('enterGrammar')">
-      <div class="entrance-icon">🏰</div>
-      <h3>语法城堡</h3>
-      <p>闯语法塔，掌握英语语法！</p>
-      <div class="entrance-stats">
-        ⭐ {{ grammarStars }} / {{ maxStars }} 星
-        <span v-if="grammarKeys > 0"> · 🔑 {{ grammarKeys }} 把钥匙</span>
-      </div>
-    </div>
-
-    <!-- 针对性训练卡片 -->
-    <div class="training-entrance" @click="$emit('startTargetedTraining')">
-      <div class="entrance-icon">🎯</div>
-      <h3>针对性训练</h3>
-      <p>根据错题记录，自动推荐薄弱题型</p>
-      <div class="entrance-stats knowledge-stats">
-        {{ weakNodeText }}
-      </div>
-    </div>
-
-    <!-- 复习模式卡片 -->
-    <div class="review-entrance" @click="$emit('startReview')">
-      <div class="entrance-icon">📚</div>
-      <h3>复习模式</h3>
-      <p>基于遗忘曲线，智能安排复习</p>
-      <div class="entrance-stats knowledge-stats">
-        {{ dueText }}
-      </div>
-    </div>
-
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { reactive, computed } from 'vue';
 import { useSettingsStore } from '../store/settingsStore';
 import { useGameStore } from '../store/gameStore';
 import { useEnglishKnowledgeStore } from '../store/englishKnowledgeStore';
-import { speedSpellConfig } from '../config/english/speedSpell';
 import { englishGradesConfig } from '../config/english/grades';
 import { grammarTowers } from '../config/english/grammar';
-import { englishKnowledgeNodes } from '../config/knowledge';
 import { useEnglishSpiritStore } from '../store/englishSpiritStore';
 import { useEnglishAdventureStore } from '../store/englishAdventureStore';
 import { getAllEnglishRegions } from '../config/english/adventure';
 import { getDueCount } from '../utils/spacedRepetition';
 
-const emit = defineEmits(['startSpeedSpell', 'back', 'enterGrammar', 'startAdventure',
+const emit = defineEmits([
+  'startSpeedSpell', 'back', 'enterGrammar', 'startAdventure',
   'openLeaderboard', 'openAchievements', 'startTargetedTraining', 'startReview',
-  'startKnowledgeCenter']);
+  'startKnowledgeCenter',
+  'startTranslation', 'startListening', 'startReading', 'enterSpeaking',
+  'enterSpeedSpellHall'
+]);
 
 const settingsStore = useSettingsStore();
 const gameStore = useGameStore();
@@ -124,15 +92,64 @@ const levelTheme = computed(() => {
   return cfg ? cfg.theme : '';
 });
 
-const modes = Object.values(speedSpellConfig.modes).map(m => ({
-  id: m.id,
-  icon: m.icon,
-  name: m.name,
-  description: m.description
-}));
+// ====== 分区定义 ======
+const sections = [
+  {
+    id: 'training',
+    label: '智能训练',
+    icon: '🎯',
+    items: [
+      { id: 'targetedTraining', name: '针对性训练', icon: '🎯', desc: '错题强化', action: 'startTargetedTraining' },
+      { id: 'review', name: '复习模式', icon: '📚', desc: '遗忘曲线', action: 'startReview' }
+    ]
+  },
+  {
+    id: 'vocabulary',
+    label: '单词速拼',
+    icon: '🔤',
+    items: [
+      { id: 'speedSpellEntry', name: '进入单词速拼', icon: '⚡', desc: '游戏模式/专项训练', action: 'enterSpeedSpellHall' }
+    ]
+  },
+  {
+    id: 'grammar',
+    label: '语法城堡',
+    icon: '🏰',
+    items: [
+      { id: 'grammarCastle', name: '进入语法城堡', icon: '🏰', desc: '闯语法塔，掌握语法', action: 'enterGrammar' }
+    ]
+  },
+  {
+    id: 'speaking',
+    label: '口语专区',
+    icon: '💬',
+    items: [
+      { id: 'speakingArea', name: '口语专区', icon: '💬', desc: '常用语/情景对话/跟读', action: 'enterSpeaking' }
+    ]
+  },
+  {
+    id: 'challenge',
+    label: '综合挑战',
+    icon: '⚔️',
+    items: [
+      { id: 'adventure', name: '冒险模式', icon: '🕹️', desc: '探索英语世界', action: 'startAdventure' }
+    ]
+  }
+];
 
-const bestScores = computed(() => gameStore.englishSpeedSpell?.bestScores || {});
+const expandedSections = reactive({
+  training: true,
+  vocabulary: true,
+  grammar: true,
+  speaking: false,
+  challenge: false
+});
 
+const toggleSection = (id) => {
+  expandedSections[id] = !expandedSections[id];
+};
+
+// ====== 卡片条状 ======
 const grammarStars = computed(() => {
   const progress = gameStore.grammarProgress?.towerProgress || {};
   let total = 0;
@@ -153,13 +170,16 @@ const maxStars = computed(() => {
 
 const grammarKeys = computed(() => gameStore.grammarProgress?.totalKeys || 0);
 
-// ====== 知识学习统计（英语） ======
+// ====== 知识学习统计 ======
 const englishKnowledgeStore = useEnglishKnowledgeStore();
+
+// 薄弱知识点阈值：错题占比 > 30% 视为薄弱
+const WEAK_NODE_THRESHOLD = 0.3;
 
 const weakNodeCount = computed(() => {
   const records = englishKnowledgeStore.records;
   return Object.values(records).filter(r =>
-    r.totalAttempts > 0 && (r.wrongCount / r.totalAttempts) > 0.3
+    r.totalAttempts > 0 && (r.wrongCount / r.totalAttempts) > WEAK_NODE_THRESHOLD
   ).length;
 });
 
@@ -169,13 +189,13 @@ const dueCount = computed(() => {
 
 const weakNodeText = computed(() => {
   return weakNodeCount.value > 0
-    ? `待强化: ${weakNodeCount.value} 个知识点`
+    ? '待强化: ' + weakNodeCount.value + ' 个知识点'
     : '暂无薄弱点';
 });
 
 const dueText = computed(() => {
   return dueCount.value > 0
-    ? `${dueCount.value} 个知识点待复习`
+    ? dueCount.value + ' 个知识点待复习'
     : '暂无待复习内容';
 });
 
@@ -195,6 +215,47 @@ const currentRegionName = computed(() => {
   const region = regions.find(r => r.id === regionId);
   return region ? region.name : '';
 });
+
+// ====== 处理卡片点击 ======
+const bestScores = computed(() => gameStore.englishSpeedSpell?.bestScores || {});
+
+const handleItemClick = (item) => {
+  // 单词速拼游戏模式（带 mode 参数）
+  if (item.action === 'startSpeedSpell') {
+    emit('startSpeedSpell', item.mode);
+    return;
+  }
+  // 其他事件直接 emit
+  emit(item.action);
+};
+
+const getStatusText = (item) => {
+  switch (item.id) {
+  case 'targetedTraining':
+    return weakNodeText.value;
+  case 'review':
+    return dueText.value;
+  case 'speedBase':
+  case 'speedBlitz':
+  case 'speedSurvival':
+    return getBestScoreText(item.mode || item.id.replace('speed', '').toLowerCase());
+  case 'grammarCastle':
+    return '⭐ ' + grammarStars.value + ' / ' + maxStars.value + ' 星' + (grammarKeys.value > 0 ? ' · 🔑 ' + grammarKeys.value + ' 把钥匙' : '');
+  case 'adventure':
+    return getAdventureStatusText();
+  default:
+    return '';
+  }
+};
+
+const getBestScoreText = (modeId) => {
+  const score = bestScores.value[modeId];
+  return score ? '最佳: ' + score.score + '分 (' + score.rating + ')' : '暂无记录';
+};
+
+const getAdventureStatusText = () => {
+  return '收集进度: ' + spiritCollectedCount.value + '/' + spiritTotalCount.value;
+};
 </script>
 
 <style scoped>
@@ -212,7 +273,7 @@ const currentRegionName = computed(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .header-left h2 {
@@ -301,224 +362,134 @@ const currentRegionName = computed(() => {
   background: rgba(255, 255, 255, 0.25);
 }
 
-.subtitle {
-  margin: 0 0 2rem;
-  opacity: 0.7;
-  font-size: 0.95rem;
-}
-
-.mode-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-}
-
-.mode-card {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.2));
-  border-radius: 15px;
-  padding: 2rem;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  border: 2px solid transparent;
-}
-
-.mode-card:hover {
-  transform: translateY(-3px);
-  border-color: #34d399;
-  box-shadow: 0 8px 25px rgba(52, 211, 153, 0.2);
-}
-
-.mode-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
-.mode-card h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.2rem;
-}
-
-.mode-card p {
-  margin: 0;
-  opacity: 0.8;
-  font-size: 0.9rem;
-}
-
-.mode-best {
-  margin-top: 1rem;
-  font-size: 0.8rem;
-  color: #34d399;
-}
-
-.mode-best.empty {
-  color: rgba(255, 255, 255, 0.35);
-}
-
-.adventure-entrance {
-  margin-top: 2rem;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.2));
-  border-radius: 15px;
-  padding: 2rem;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  border: 2px solid rgba(16, 185, 129, 0.3);
-}
-
-.adventure-entrance:hover {
-  transform: translateY(-3px);
-  border-color: #10b981;
-  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);
-}
-
-.adventure-stats {
-  margin-top: 1rem;
+/* ========== 折叠分区 ========== */
+.hall-sections {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
+  gap: 1.2rem;
 }
 
-.spirit-progress {
+.hall-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  user-select: none;
+}
+
+.section-header:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.section-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.section-toggle {
+  font-size: 0.85rem;
+  opacity: 0.6;
+  transition: transform 0.2s ease;
+}
+
+.section-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 1.5rem 1.2rem 1.5rem;
+}
+
+/* 分割线 */
+.section-divider {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  width: 100%;
-  max-width: 280px;
+  margin: 0.3rem 0;
+  padding: 0.2rem 0;
 }
 
-.spirit-progress-bar {
+.section-divider::before,
+.section-divider::after {
+  content: '';
   flex: 1;
-  height: 8px;
+  height: 1px;
   background: rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
-  overflow: hidden;
-  min-width: 60px;
 }
 
-.spirit-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981, #34d399);
-  border-radius: 4px;
-  transition: width 0.6s ease;
-}
-
-.spirit-progress-text {
-  font-size: 0.85rem;
-  color: #34d399;
-  font-weight: bold;
+.divider-label {
+  padding: 0 0.8rem;
+  font-size: 0.8rem;
+  opacity: 0.5;
   white-space: nowrap;
 }
 
-.current-region {
-  font-size: 0.8rem;
+/* ========== 卡片 ========== */
+.hall-card {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1.5px solid transparent;
+  min-height: 3.2rem;
+}
+
+.hall-card:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.card-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  width: 2rem;
+  text-align: center;
+}
+
+.card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.card-name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.card-desc {
+  font-size: 0.78rem;
   opacity: 0.6;
-  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.grammar-entrance {
-  margin-top: 2rem;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(180, 120, 255, 0.2));
-  border-radius: 15px;
-  padding: 2rem;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  border: 2px solid rgba(180, 120, 255, 0.3);
+.card-status {
+  font-size: 0.72rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.grammar-entrance:hover {
-  transform: translateY(-3px);
-  border-color: #b078ff;
-  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.25);
-}
-
-.entrance-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
-.grammar-entrance h3 {
-  margin: 0 0 0.5rem;
+.card-arrow {
   font-size: 1.2rem;
-  color: #e8c8ff;
-}
-
-.grammar-entrance p {
-  margin: 0;
-  opacity: 0.8;
-  font-size: 0.9rem;
-}
-
-.entrance-stats {
-  margin-top: 0.8rem;
-  font-size: 0.85rem;
-  color: #ffd700;
-}
-
-.entrance-stats.knowledge-stats {
-  color: #34d399;
-}
-
-/* 针对性训练卡片 */
-.training-entrance {
-  margin-top: 2rem;
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(251, 191, 36, 0.15));
-  border-radius: 15px;
-  padding: 2rem;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  border: 2px solid rgba(245, 158, 11, 0.3);
-}
-
-.training-entrance:hover {
-  transform: translateY(-3px);
-  border-color: #f59e0b;
-  box-shadow: 0 8px 25px rgba(245, 158, 11, 0.25);
-}
-
-.training-entrance h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.2rem;
-  color: #fbbf24;
-}
-
-.training-entrance p {
-  margin: 0;
-  opacity: 0.8;
-  font-size: 0.9rem;
-}
-
-/* 复习模式卡片 */
-.review-entrance {
-  margin-top: 2rem;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(167, 120, 255, 0.15));
-  border-radius: 15px;
-  padding: 2rem;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s;
-  border: 2px solid rgba(139, 92, 246, 0.3);
-}
-
-.review-entrance:hover {
-  transform: translateY(-3px);
-  border-color: #8b5cf6;
-  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.25);
-}
-
-.review-entrance h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.2rem;
-  color: #c4b5fd;
-}
-
-.review-entrance p {
-  margin: 0;
-  opacity: 0.8;
-  font-size: 0.9rem;
+  opacity: 0.4;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
@@ -535,8 +506,21 @@ const currentRegionName = computed(() => {
     align-self: flex-end;
   }
 
-  .mode-cards {
-    grid-template-columns: 1fr;
+  .section-items {
+    padding: 0 0.8rem 0.8rem 0.8rem;
+  }
+
+  .hall-card {
+    padding: 0.6rem 0.8rem;
+    gap: 0.5rem;
+  }
+
+  .card-name {
+    font-size: 0.9rem;
+  }
+
+  .card-desc {
+    display: none;
   }
 }
 </style>

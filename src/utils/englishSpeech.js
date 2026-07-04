@@ -8,6 +8,8 @@ class EnglishSpeech {
     this.voice = null;
     this._supported = false;
     this._initialized = false;
+    this._onVoicesChanged = null;
+    this._voicesChangedTimer = null;
   }
 
   /**
@@ -16,6 +18,20 @@ class EnglishSpeech {
    */
   isSupported() {
     return 'speechSynthesis' in window;
+  }
+
+  /**
+   * 清理 voiceschanged 事件监听器和超时定时器
+   */
+  _cleanupVoicesChanged() {
+    if (this._onVoicesChanged && this.synth) {
+      this.synth.removeEventListener('voiceschanged', this._onVoicesChanged);
+      this._onVoicesChanged = null;
+    }
+    if (this._voicesChangedTimer) {
+      clearTimeout(this._voicesChangedTimer);
+      this._voicesChangedTimer = null;
+    }
   }
 
   /**
@@ -49,6 +65,7 @@ class EnglishSpeech {
                        voices[0];
           this._initialized = true;
           this._supported = true;
+          this._cleanupVoicesChanged();
           resolve(true);
           return;
         }
@@ -62,14 +79,16 @@ class EnglishSpeech {
                          updatedVoices[0];
             this._initialized = true;
             this._supported = true;
+            this._cleanupVoicesChanged();
             resolve(true);
           };
           window.speechSynthesis.addEventListener('voiceschanged', this._onVoicesChanged);
           // 设置超时防止无限等待
-          setTimeout(() => {
+          this._voicesChangedTimer = setTimeout(() => {
             if (!this._initialized) {
               this._initialized = true;
               this._supported = true;
+              this._cleanupVoicesChanged();
               resolve(true);
             }
           }, 3000);
@@ -170,10 +189,7 @@ class EnglishSpeech {
    */
   destroy() {
     this.stop();
-    if (this.synth && this._onVoicesChanged) {
-      this.synth.removeEventListener('voiceschanged', this._onVoicesChanged);
-      this._onVoicesChanged = null;
-    }
+    this._cleanupVoicesChanged();
     this.synth = null;
     this._initialized = false;
     this._supported = false;

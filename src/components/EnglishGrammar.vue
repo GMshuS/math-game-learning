@@ -27,45 +27,64 @@
       <span>🔑 语法钥匙: {{ totalKeys }} 把</span>
     </div>
 
-    <!-- 语法塔卡片列表 -->
-    <div class="tower-list">
+    <!-- 按 category 分组折叠展示 -->
+    <div class="category-sections">
       <div
-        v-for="tower in towers"
-        :key="tower.id"
-        class="tower-card"
-        :class="{ locked: !isTowerUnlocked(tower) }"
-        @click="onTowerClick(tower)"
+        v-for="group in categoryGroups"
+        :key="group.key"
+        class="category-section"
       >
-        <div class="tower-icon">{{ tower.icon }}</div>
-        <h3>{{ tower.name }}</h3>
-        <p>{{ tower.description }}</p>
-        <!-- 8层星级进度 -->
-        <div class="floor-stars">
-          <span
-            v-for="f in getTowerFloorCount(tower.id)"
-            :key="f"
-            :class="['star-dot', getFloorStarClass(tower.id, f)]"
-          >⭐</span>
+        <!-- 分组标题（可折叠） -->
+        <div class="category-header" @click="toggleCategory(group.key)">
+          <span class="category-title">{{ group.icon }} {{ group.label }}</span>
+          <div class="category-meta">
+            <span class="category-count">{{ group.towers.length }} 座塔</span>
+            <span class="category-stars">{{ groupStars[group.key] }}⭐</span>
+            <span class="category-toggle">{{ expandedCategories[group.key] ? '▼' : '▶' }}</span>
+          </div>
         </div>
-        <div class="tower-star-count">
-          {{ getTowerStars(tower.id) }} / {{ getTowerMaxStars(tower.id) }} ⭐
+
+        <!-- 分组内塔卡片列表 -->
+        <div v-show="expandedCategories[group.key]" class="tower-list">
+          <div
+            v-for="tower in group.towers"
+            :key="tower.id"
+            class="tower-card"
+            :class="{ locked: !isTowerUnlocked(tower) }"
+            @click="onTowerClick(tower)"
+          >
+            <div class="tower-icon">{{ tower.icon }}</div>
+            <h3>{{ tower.name }}</h3>
+            <p>{{ tower.description }}</p>
+            <!-- 8层星级进度 -->
+            <div class="floor-stars">
+              <span
+                v-for="f in getTowerFloorCount(tower.id)"
+                :key="f"
+                :class="['star-dot', getFloorStarClass(tower.id, f)]"
+              >⭐</span>
+            </div>
+            <div class="tower-star-count">
+              {{ getTowerStars(tower.id) }} / {{ getTowerMaxStars(tower.id) }} ⭐
+            </div>
+            <div v-if="isTowerCleared(tower.id)" class="cleared-badge">
+              ✅ 已通关
+            </div>
+            <div v-if="!isTowerUnlocked(tower)" class="lock-overlay">🔒</div>
+          </div>
         </div>
-        <div v-if="isTowerCleared(tower.id)" class="cleared-badge">
-          ✅ 已通关
-        </div>
-        <div v-if="!isTowerUnlocked(tower)" class="lock-overlay">🔒</div>
       </div>
     </div>
 
     <!-- 空状态 -->
-    <div v-if="towers.length === 0" class="empty-state">
+    <div v-if="grammarTowers.length === 0" class="empty-state">
       <p>暂无语法塔数据</p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import { useGameStore } from '../store/gameStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { grammarTowers, getTowerById } from '../config/english/grammar';
@@ -117,9 +136,47 @@ const levelTheme = computed(() => {
   return cfg ? cfg.theme : '';
 });
 
-// 语法塔列表：显示所有塔，解锁由 isTowerUnlocked 控制
-const towers = computed(() => {
-  return grammarTowers;
+// ========== 分类定义 ==========
+const categoryGroupDefs = {
+  morphology: { key: 'morphology', label: '词法篇', icon: '📦' },
+  tense: { key: 'tense', label: '时态篇', icon: '⏰' },
+  syntax: { key: 'syntax', label: '句法篇', icon: '🔀' }
+};
+
+// 展开状态：默认全部展开
+const expandedCategories = reactive({
+  morphology: true,
+  tense: true,
+  syntax: true
+});
+
+const toggleCategory = (key) => {
+  expandedCategories[key] = !expandedCategories[key];
+};
+
+// 按 category 分组
+const categoryGroups = computed(() => {
+  const groups = {};
+  for (const tower of grammarTowers) {
+    const cat = tower.category || 'morphology';
+    if (!groups[cat]) {
+      const def = categoryGroupDefs[cat] || { key: cat, label: cat, icon: '📁' };
+      groups[cat] = { ...def, towers: [] };
+    }
+    groups[cat].towers.push(tower);
+  }
+  return Object.values(groups);
+});
+
+// 各分组的星星数
+const groupStars = computed(() => {
+  const stars = {};
+  for (const tower of grammarTowers) {
+    const cat = tower.category || 'morphology';
+    if (!stars[cat]) stars[cat] = 0;
+    stars[cat] += getTowerStars(tower.id);
+  }
+  return stars;
 });
 
 // 获取某塔的星星总数
@@ -269,6 +326,67 @@ function onTowerClick(tower) {
   margin: 0 0 1rem;
   opacity: 0.7;
   font-size: 0.95rem;
+}
+
+/* ---- 分类折叠分区 ---- */
+.category-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.category-section {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(180, 120, 255, 0.15);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1.2rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  user-select: none;
+}
+
+.category-header:hover {
+  background: rgba(180, 120, 255, 0.08);
+}
+
+.category-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e8c8ff;
+}
+
+.category-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 0.8rem;
+}
+
+.category-count {
+  opacity: 0.5;
+}
+
+.category-stars {
+  color: #ffd700;
+  font-weight: 600;
+}
+
+.category-toggle {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  transition: transform 0.2s ease;
+}
+
+/* 分组内塔卡片列表使用更紧凑的网格 */
+.category-section .tower-list {
+  padding: 0 1.2rem 1.2rem 1.2rem;
 }
 
 /* ---- 总结信息条 ---- */

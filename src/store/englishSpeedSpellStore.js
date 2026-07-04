@@ -45,7 +45,11 @@ export const useEnglishSpeedSpellStore = defineStore('englishSpeedSpell', {
       const settingsStore = useSettingsStore();
       const level = settingsStore.getEffectiveEnglishLevel;
       const words = getWordsByLevel(level);
-      if (words.length < 4) return;
+      if (words.length < 4) {
+        console.warn(`[englishSpeedSpell] 当前等级 ${level} 词汇不足 4 个，无法生成题目`);
+        this.currentQuestion = null;
+        return;
+      }
 
       // 随机选一个词
       const wordIndex = Math.floor(Math.random() * words.length);

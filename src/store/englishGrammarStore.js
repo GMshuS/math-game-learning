@@ -268,6 +268,13 @@ export const useEnglishGrammarStore = defineStore('englishGrammar', {
       // 动态出题：动态生成器优先 → 回退 grammar.js 静态
       this.floorQuestions = this._generateQuestions(floorData);
 
+      // 无可用题目时跳过该层
+      if (this.floorQuestions.length === 0) {
+        console.warn(`[englishGrammarStore] 楼层 ${floorNumber} 无可用题目，跳过`);
+        this.gamePhase = 'idle';
+        return;
+      }
+
       // BOSS层使用配置的HP
       if (floorData.type === 'bossFight' && floorData.boss) {
         this.bossHp = floorData.boss.hp || 3;
@@ -332,6 +339,7 @@ export const useEnglishGrammarStore = defineStore('englishGrammar', {
           break;
 
         default:
+          console.warn(`[englishGrammarStore] 未知题型 "${question.type}"，使用默认字符串比较`);
           isCorrect = String(answer).toLowerCase() === String(question.answer).toLowerCase();
       }
 
@@ -385,10 +393,11 @@ export const useEnglishGrammarStore = defineStore('englishGrammar', {
       this.combo++;
       if (this.combo > this.maxCombo) this.maxCombo = this.combo;
 
-      // 得分 = 基础10分 + 连击奖励
-      const basePoints = 10;
-      const comboBonus = Math.floor(basePoints * (this.combo - 1) * 0.5);
-      this.score += basePoints + comboBonus;
+      // 得分 = 基础分 + 连击奖励
+      const BASE_POINTS = 10;
+      const COMBO_BONUS_RATE = 0.5;
+      const comboBonus = Math.floor(BASE_POINTS * (this.combo - 1) * COMBO_BONUS_RATE);
+      this.score += BASE_POINTS + comboBonus;
       this.floorCorrectCount++;
 
       // BOSS战特殊逻辑
@@ -457,6 +466,7 @@ export const useEnglishGrammarStore = defineStore('englishGrammar', {
         this.gamePhase = 'gameOver';
       } else {
         // 未达到结束条件但被调用（超时等），视为失败
+        gameStore.saveGame();
         this.gamePhase = 'gameOver';
       }
     },
@@ -492,10 +502,14 @@ export const useEnglishGrammarStore = defineStore('englishGrammar', {
       this._ensureProgressExists(gameStore);
       const progress = gameStore.grammarProgress.towerProgress[this.currentTower];
 
-      // 计算奖励
+      // 计算奖励：基础奖励 + 每颗星的奖励
+      const COINS_BASE = 10;
+      const COINS_PER_STAR = 5;
+      const EXP_BASE = 20;
+      const EXP_PER_STAR = 10;
       const totalStars = progress.totalStars || 0;
-      const coins = totalStars * 5 + 10;  // 基础10 + 每星5
-      const exp = totalStars * 10 + 20;   // 基础20 + 每星10
+      const coins = totalStars * COINS_PER_STAR + COINS_BASE;
+      const exp = totalStars * EXP_PER_STAR + EXP_BASE;
 
       // 发放奖励
       gameStore.addCoins(coins);
