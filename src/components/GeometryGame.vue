@@ -16,7 +16,7 @@
             :key="mode.id"
             class="mode-card"
             :class="{ active: selectedMode === mode.id }"
-            @click="selectedMode = mode.id"
+            @click="startGame(mode.id)"
           >
             <span class="mode-icon">{{ mode.icon }}</span>
             <span class="mode-name">{{ mode.name }}</span>
@@ -25,10 +25,6 @@
         </div>
       </div>
 
-      <!-- 开始按钮 -->
-      <button class="btn-start" @click="startGame">
-        🚀 开始挑战
-      </button>
     </div>
 
     <!-- 游戏界面 -->
@@ -145,7 +141,8 @@ function createPhaserConfig(container) {
 /**
  * 开始游戏
  */
-function startGame() {
+function startGame(modeId) {
+  if (modeId) selectedMode.value = modeId;
   phase.value = 'playing';
   gameScore.value = 0;
   gameCorrect.value = 0;

@@ -18,7 +18,7 @@
             :key="exp.id"
             class="experiment-card"
             :class="{ active: selectedExperiment === exp.id }"
-            @click="selectedExperiment = exp.id"
+            @click="startSimulation(exp.id)"
           >
             <span class="exp-icon">{{ exp.icon }}</span>
             <span class="exp-name">{{ exp.name }}</span>
@@ -52,9 +52,6 @@
         <p class="knowledge-text">{{ knowledgeText }}</p>
       </div>
 
-      <button class="btn-start" @click="startSimulation">
-        🚀 开始实验
-      </button>
     </div>
 
     <!-- ====== 模拟界面 ====== -->
@@ -229,7 +226,8 @@ function getScene() {
 /**
  * 开始模拟
  */
-function startSimulation() {
+function startSimulation(expId) {
+  if (expId) selectedExperiment.value = expId;
   phase.value = 'simulating';
   simulating.value = true;
   simulationStats.value = null;

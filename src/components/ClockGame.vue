@@ -13,7 +13,7 @@
         <div
           class="mode-card"
           :class="{ active: selectedMode === 'read' }"
-          @click="selectedMode = 'read'"
+          @click="startGame('read')"
         >
           <span class="mode-icon">👀</span>
           <span class="mode-name">认读时间</span>
@@ -22,7 +22,7 @@
         <div
           class="mode-card"
           :class="{ active: selectedMode === 'set' }"
-          @click="selectedMode = 'set'"
+          @click="startGame('set')"
         >
           <span class="mode-icon">✋</span>
           <span class="mode-name">拨钟练习</span>
@@ -30,9 +30,6 @@
         </div>
       </div>
 
-      <button class="btn-start" @click="startGame">
-        开始学习
-      </button>
     </div>
 
     <!-- 游戏主界面 -->
@@ -260,7 +257,8 @@ function generateQuestion() {
 /**
  * 开始游戏
  */
-function startGame() {
+function startGame(modeId) {
+  if (modeId) selectedMode.value = modeId;
   phase.value = 'game';
   score.value = 0;
   combo.value = 0;
