@@ -249,10 +249,17 @@ export default class ClockScene extends Phaser.Scene {
   }
 
   /**
-   * 动画过渡到目标时间
+   * 动画过渡到目标时间（可被后续调用中断重启）
+   *
+   * 场景 create() 首次调用时可能传入 (0,0) 使指针指向 12:00，
+   * 此时 animating=true 持续 800ms。如果后续 animateToTime 再次被调用
+   * （例如外部的 setClockTime 在场景就绪后设真实时间），必须能中断
+   * 前一次动画并立刻启用新动画，否则指针永远停在 12:00。
    */
   animateToTime(targetHour, targetMinute) {
-    if (this.animating) return;
+    // 生成唯一动画 ID，旧动画循环检测到 ID 变更后自行退出
+    const animId = Date.now() + Math.random();
+    this._latestAnimId = animId;
     this.animating = true;
 
     const startHourAngle = this.getHourAngle(this.hour, this.minute);
@@ -266,6 +273,8 @@ export default class ClockScene extends Phaser.Scene {
     const animate = () => {
       if (this._destroyed) return;
       if (!this.scene || !this.scene.isActive()) return;
+      // 如果产生了新的动画（animId 被更新），旧循环立即退出
+      if (this._latestAnimId !== animId) return;
 
       const elapsed = Date.now() - startTime;
       const progress = Math.min(1, elapsed / duration);
@@ -281,6 +290,7 @@ export default class ClockScene extends Phaser.Scene {
         requestAnimationFrame(animate);
       } else {
         this.animating = false;
+        this._latestAnimId = null;
         this.hour = targetHour;
         this.minute = targetMinute;
 
@@ -290,6 +300,6 @@ export default class ClockScene extends Phaser.Scene {
       }
     };
 
-    animate();
+    requestAnimationFrame(animate);
   }
 }

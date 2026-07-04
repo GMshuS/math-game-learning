@@ -107,9 +107,9 @@
         </div>
         <div class="control-row">
           <span class="control-label">分针：</span>
-          <button class="control-btn" :disabled="feedback !== null" @click="adjustMinute(-5)">−</button>
+          <button class="control-btn" :disabled="feedback !== null" @click="adjustMinute(-1)">−</button>
           <span class="control-value">{{ String(setMinute).padStart(2, '0') }} 分</span>
-          <button class="control-btn" :disabled="feedback !== null" @click="adjustMinute(5)">+</button>
+          <button class="control-btn" :disabled="feedback !== null" @click="adjustMinute(1)">+</button>
         </div>
         <button class="btn-confirm" :disabled="feedback !== null" @click="submitTime">
           确认时间
@@ -169,7 +169,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import Phaser from 'phaser';
 import { useSettingsStore } from '../store/settingsStore';
 import ClockScene from '../scenes/ClockScene';
@@ -242,13 +242,17 @@ function getScene() {
 }
 
 /**
- * 设置钟面时间（带游戏实例活跃性检查）
+ * 设置钟面时间（带重试机制）
+ * Phaser 场景初始化是异步的（跨帧），首次调用时场景可能尚未就绪，
+ * 通过 setTimeout 轮询等待场景激活后再设置时间。
  */
-function setClockTime(hour, minute) {
+function setClockTime(hour, minute, retries = 15) {
   if (!game) return;
   const scene = getScene();
   if (scene && scene.scene && scene.scene.isActive()) {
     scene.animateToTime(hour, minute);
+  } else if (retries > 0) {
+    setTimeout(() => setClockTime(hour, minute, retries - 1), 200);
   }
 }
 
@@ -280,14 +284,34 @@ function generateQuestion() {
     targetTimeDisplay.value = time.display;
     currentAnswer.value = time.display;
 
-    // 设置初始随机指针位置
+    // 设置初始随机指针位置（1分钟精度，配合拨钟步长1）
     setHour.value = Math.floor(Math.random() * 12) + 1;
-    setMinute.value = Math.floor(Math.random() * 12) * 5;
+    setMinute.value = Math.floor(Math.random() * 60);
     setClockTime(setHour.value, setMinute.value);
   }
 
   selectedChoice.value = null;
   feedback.value = null;
+}
+
+/**
+ * 初始化 Phaser 游戏（仅在首次进入游戏时创建）
+ */
+function initPhaserGame() {
+  if (game) return;
+  if (!gameContainer.value) return;
+  game = new Phaser.Game({
+    type: Phaser.AUTO,
+    parent: gameContainer.value,
+    width: 400,
+    height: 350,
+    backgroundColor: '#1e293b',
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    scene: [ClockScene]
+  });
 }
 
 /**
@@ -300,7 +324,11 @@ function startGame(modeId) {
   combo.value = 0;
   correctCount.value = 0;
   currentQuestionIndex.value = 0;
-  generateQuestion();
+  // 等待 DOM 更新后初始化 Phaser（game-container 在 v-else 中，mount 时不可用）
+  nextTick(() => {
+    initPhaserGame();
+    generateQuestion();
+  });
 }
 
 /**
@@ -337,7 +365,7 @@ function adjustMinute(delta) {
     setHour.value = h;
   }
   if (m < 0) {
-    m = 55;
+    m = 59;
     let h = setHour.value - 1;
     if (h < 1) h = 12;
     setHour.value = h;
@@ -396,20 +424,7 @@ function resetGame() {
 
 // 管理 Phaser 生命周期
 onMounted(() => {
-  if (gameContainer.value) {
-    game = new Phaser.Game({
-      type: Phaser.AUTO,
-      parent: gameContainer.value,
-      width: 400,
-      height: 350,
-      backgroundColor: '#1e293b',
-      scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH
-      },
-      scene: [ClockScene]
-    });
-  }
+  initPhaserGame();
 });
 
 onUnmounted(() => {
