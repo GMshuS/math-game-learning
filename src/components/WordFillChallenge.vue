@@ -1,10 +1,20 @@
 <template>
   <div class="wordfill-challenge">
+    <GameTutorial
+      v-if="showTutorial"
+      title="📝 应用与填空玩法说明"
+      :steps="wordfillTutorialSteps"
+      @close="closeTutorial"
+    />
+
     <!-- 模式选择 -->
     <div v-if="phase === 'select'" class="mode-select">
       <div class="header">
         <h2>📝 应用与填空</h2>
-        <button class="btn-back" @click="$emit('back')">← 返回</button>
+        <div class="header-actions">
+          <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
+          <button class="btn-back" @click="$emit('back')">← 返回</button>
+        </div>
       </div>
 
       <div class="question-count-cards">
@@ -103,8 +113,38 @@ import { generateQuestion } from '../utils/questionGenerator.js';
 import { checkAnswer } from '../utils/questionUtils.js';
 import { useSettingsStore } from '../store/settingsStore.js';
 import { useMathKnowledgeStore } from '../store/mathKnowledgeStore.js';
+import GameTutorial from './GameTutorial.vue';
 
 const emit = defineEmits(['back']);
+
+const showTutorial = ref(false);
+
+const wordfillTutorialSteps = [
+  {
+    title: '选择题量',
+    description: '在模式选择界面选择要挑战的题目数量（10题、20题或30题）。系统将自动生成应用与填空题目。'
+  },
+  {
+    title: '应用题型',
+    description: '应用题模拟真实场景，要求理解题意后列式计算。例如购物找零、时间计算、分配问题等，锻炼数学应用能力。'
+  },
+  {
+    title: '填空题型',
+    description: '填空题给出部分信息，要求填入缺失的数值。例如数列规律、单位换算、图形属性等，巩固基础知识点。'
+  },
+  {
+    title: '答题方式',
+    description: '每道题在输入框中填写答案，按"提交"按钮或回车键确认。答对进入下一题，答错会显示正确答案并自动进入下一题。'
+  },
+  {
+    title: '连击与计分',
+    description: '连续答对可累积连击数（🔥），连击数越高越有成就感。最终根据正确题数计算正确率，查看自己的挑战成果。'
+  }
+];
+
+const closeTutorial = () => {
+  showTutorial.value = false;
+};
 
 const settingsStore = useSettingsStore();
 const mathKnowledgeStore = useMathKnowledgeStore();
@@ -299,6 +339,27 @@ function goBackToSelect() {
 
 .btn-back:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-help {
+  padding: 0.5rem 1.2rem;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.btn-help:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
 .question-count-cards {

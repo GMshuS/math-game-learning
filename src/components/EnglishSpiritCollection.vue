@@ -1,5 +1,11 @@
 <template>
   <div class="spirit-collection">
+    <GameTutorial
+      v-if="showTutorial"
+      title="🕹️ 精灵收集玩法说明"
+      :steps="tutorialSteps"
+      @close="closeTutorial"
+    />
     <!-- 头部 -->
     <div class="collection-header">
       <h2>🕹️ 精灵图鉴</h2>
@@ -12,6 +18,7 @@
         </div>
         <span class="progress-text">{{ collectedCount }}/{{ totalCount }}</span>
       </div>
+      <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
       <button class="btn-back" @click="$emit('back')">← 返回</button>
     </div>
 
@@ -64,12 +71,37 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
+import GameTutorial from './GameTutorial.vue';
 import { englishSpiritsConfig, getSpiritsByRegion } from '../config/english/spirits';
 import { getAllEnglishRegions } from '../config/english/adventure';
 import { useEnglishSpiritStore } from '../store/englishSpiritStore';
 
 defineEmits(['back']);
+
+// ============ 玩法说明 ============
+const showTutorial = ref(false);
+const tutorialSteps = [
+  {
+    title: '精灵获取方式',
+    description: '精灵通过击败英语冒险世界中各区域的 BOSS 获得。每个区域都有一只专属精灵守护。'
+  },
+  {
+    title: '区域解锁',
+    description: '完成前置区域的冒险挑战后，即可解锁下一个区域。每个区域的 BOSS 战需要连续答对问题才能击败。'
+  },
+  {
+    title: '收集进度',
+    description: '在精灵图鉴中可以查看所有精灵的收集进度。已收集的精灵会显示其名称和描述，未收集的精灵会显示解锁条件。'
+  },
+  {
+    title: '全收集奖励',
+    description: '集齐所有区域的精灵后，将召唤出传说中的英语国王精灵 👑，获得特殊成就。'
+  }
+];
+function closeTutorial() {
+  showTutorial.value = false;
+}
 
 const spiritStore = useEnglishSpiritStore();
 
@@ -137,6 +169,22 @@ function isCollected(spiritId) {
 
 .btn-back:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-help {
+  padding: 0.5rem 1.2rem;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.btn-help:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
 .collection-header h2 {

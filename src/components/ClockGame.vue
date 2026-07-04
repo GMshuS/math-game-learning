@@ -1,7 +1,17 @@
 <template>
   <div class="clock-game">
+    <GameTutorial
+      v-if="showTutorial"
+      title="🕐 钟表学院玩法说明"
+      :steps="clockTutorialSteps"
+      @close="closeTutorial"
+    />
+
     <div class="top-bar">
-      <button class="btn-back" @click="$emit('back')">← 返回</button>
+      <div class="top-bar-left">
+        <button class="btn-back" @click="$emit('back')">← 返回</button>
+      </div>
+      <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
     </div>
 
     <!-- 设置界面：年级 + 模式选择 -->
@@ -164,8 +174,34 @@ import Phaser from 'phaser';
 import { useSettingsStore } from '../store/settingsStore';
 import ClockScene from '../scenes/ClockScene';
 import { generateRandomTime, generateWrongTimes } from '../config/clock';
+import GameTutorial from './GameTutorial.vue';
 
 defineEmits(['back']);
+
+const showTutorial = ref(false);
+
+const clockTutorialSteps = [
+  {
+    title: '选择模式',
+    description: '钟表学院有两种模式：认读时间和拨钟练习，帮助你掌握时间认读技能！'
+  },
+  {
+    title: '认读时间',
+    description: '观察钟面上的时针和分针位置，从四个选项中选出正确的时间。适合刚开始学习认钟的学生。'
+  },
+  {
+    title: '拨钟练习',
+    description: '根据给出的目标时间，使用「+」「-」按钮调整时针和分针到正确位置。亲手拨钟，加深理解！'
+  },
+  {
+    title: '计分规则',
+    description: '答对一题得10分，连续答对可获得连击加分（每连击+2分）。共10道题，全部答完显示成绩。'
+  }
+];
+
+const closeTutorial = () => {
+  showTutorial.value = false;
+};
 
 const settingsStore = useSettingsStore();
 
@@ -410,6 +446,21 @@ onUnmounted(() => {
 
 .btn-back:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-help {
+  padding: 0.5rem 1.2rem;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.btn-help:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
 /* ====== 设置界面 ====== */
@@ -901,7 +952,8 @@ onUnmounted(() => {
 
 .top-bar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
   padding: 1rem 2rem 0 0;
 }

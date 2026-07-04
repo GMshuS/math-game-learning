@@ -1,5 +1,12 @@
 <template>
   <div class="english-speed-spell">
+    <GameTutorial
+      v-if="showTutorial"
+      title="⚡ 单词速拼玩法说明"
+      :steps="tutorialSteps"
+      @close="closeTutorial"
+    />
+
     <!-- 模式选择 -->
     <div v-if="!store.isPlaying && !store.gameResult" class="mode-select">
       <div class="header">
@@ -10,6 +17,7 @@
           </p>
         </div>
         <div class="header-actions">
+          <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
           <button class="btn-back" @click="$emit('back')">← 返回</button>
         </div>
       </div>
@@ -148,6 +156,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import GameTutorial from './GameTutorial.vue';
 import { useEnglishSpeedSpellStore } from '../store/englishSpeedSpellStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useGameStore } from '../store/gameStore';
@@ -156,6 +165,35 @@ import { speedSpellConfig } from '../config/english/speedSpell';
 import englishSpeech from '../utils/englishSpeech';
 
 const emit = defineEmits(['back', 'challengeEnd']);
+
+const showTutorial = ref(false);
+
+const tutorialSteps = [
+  {
+    title: '选择模式',
+    description: '单词速拼有三种模式：基础模式、闪电模式和生存模式，每种模式有不同的规则和挑战方式。'
+  },
+  {
+    title: '基础模式',
+    description: '60秒内尽可能多答题，答对一题得10分。设有连击加成机制，连续答对可获得额外分数加成！'
+  },
+  {
+    title: '闪电模式',
+    description: '45秒内与AI对手竞速，答对一题得15分。注意AI的进度条，在AI完成前答对更多题目才能获胜。'
+  },
+  {
+    title: '生存模式',
+    description: '无时间限制，但有3条生命值。答对一题得20分，答错扣一条命。3条命用完游戏结束，挑战你的极限！'
+  },
+  {
+    title: '评级与奖励',
+    description: '根据得分获得 D/C/B/A/S 评级，得分越高奖励越丰厚。可获取金币和钻石，用于解锁更多内容！'
+  }
+];
+
+const closeTutorial = () => {
+  showTutorial.value = false;
+};
 
 const store = useEnglishSpeedSpellStore();
 const settingsStore = useSettingsStore();
@@ -377,6 +415,21 @@ onUnmounted(() => {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+}
+
+.btn-help {
+  padding: 0.5rem 1.2rem;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.btn-help:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
 .btn-back {

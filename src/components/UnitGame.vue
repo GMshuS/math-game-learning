@@ -1,7 +1,15 @@
 <template>
   <div class="unit-game">
+    <GameTutorial
+      v-if="showTutorial"
+      title="📏 单位大冒险玩法说明"
+      :steps="unitTutorialSteps"
+      @close="closeTutorial"
+    />
+
     <div class="top-bar">
       <button class="btn-back" @click="$emit('back')">← 返回</button>
+      <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
     </div>
 
     <!-- 关卡选择 -->
@@ -104,8 +112,38 @@ import {
   getCategoryIds,
   generateConversionQuestion
 } from '../config/units';
+import GameTutorial from './GameTutorial.vue';
 
 defineEmits(['back']);
+
+const showTutorial = ref(false);
+
+const unitTutorialSteps = [
+  {
+    title: '选择类别',
+    description: '单位大冒险有长度、质量、时间、面积、体积和货币六大类别。选择一个类别开始单位换算挑战！'
+  },
+  {
+    title: '闯关机制',
+    description: '每个类别有5个关卡，每关包含5道单位换算题。逐关递进，难度逐步提升！'
+  },
+  {
+    title: '答题方式',
+    description: '每题给出一个数值和单位，需要从多个选项中选择正确的换算结果。考验你的单位换算能力！'
+  },
+  {
+    title: '计分规则',
+    description: '答对一题得10分。全部25题完成后，根据正确率获得1-3颗星评价：≥90%得3星，≥70%得2星，≥50%得1星。'
+  },
+  {
+    title: '学习提示',
+    description: '记住各单位之间的进率关系是换算的关键。长度单位进率多为10或1000，质量单位进率1000，时间单位进率60等。'
+  }
+];
+
+const closeTutorial = () => {
+  showTutorial.value = false;
+};
 
 const settingsStore = useSettingsStore();
 
@@ -279,6 +317,21 @@ function backToMenu() {
 
 .btn-back:hover {
   background: rgba(255, 255, 255, 0.25);
+}
+
+.btn-help {
+  padding: 0.5rem 1.2rem;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.btn-help:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
 /* 选择界面 */
@@ -588,7 +641,8 @@ function backToMenu() {
 
 .top-bar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
   padding: 1rem 2rem 0 0;
 }

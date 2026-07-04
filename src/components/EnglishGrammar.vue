@@ -1,5 +1,12 @@
 <template>
   <div class="grammar-hall">
+    <GameTutorial
+      v-if="showTutorial"
+      title="🏰 语法城堡玩法说明"
+      :steps="grammarTutorialSteps"
+      @close="closeTutorial"
+    />
+
     <!-- 顶部标题栏 -->
     <header class="grammar-header">
       <div class="header-left">
@@ -7,6 +14,7 @@
         <p class="level-info">Level {{ effectiveLevel }} · {{ levelTheme }}</p>
       </div>
       <div class="header-actions">
+        <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
         <button class="btn-back" @click="$emit('back')">← 返回</button>
       </div>
     </header>
@@ -57,13 +65,47 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import { useGameStore } from '../store/gameStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { grammarTowers, getTowerById } from '../config/english/grammar';
 import { englishGradesConfig } from '../config/english/grades';
+import GameTutorial from './GameTutorial.vue';
 
 const emit = defineEmits(['enterTower', 'back']);
+
+const showTutorial = ref(false);
+
+const closeTutorial = () => {
+  showTutorial.value = false;
+};
+
+const grammarTutorialSteps = [
+  {
+    title: '选择语法塔',
+    description: '从大厅中选择一座语法塔，每座塔对应不同的语法知识点（如时态、词性、句型等）。'
+  },
+  {
+    title: '塔的楼层',
+    description: '每座塔有8层，每层是一个独立关卡，难度逐层递增。完成一层后才能进入下一层。'
+  },
+  {
+    title: '解锁规则',
+    description: '语法塔按英语等级逐步解锁，达到指定等级即可解锁对应塔。等级越高，可挑战的塔越多。'
+  },
+  {
+    title: '闯关流程',
+    description: '进入塔后，先观看语法规则教学 → 开始答题闯关 → 完成本层后获得星级评价。'
+  },
+  {
+    title: '星级评价',
+    description: '每层最高3星，答对率越高星越多。累积星星总数展示在大厅，是衡量学习进度的重要指标。'
+  },
+  {
+    title: '语法钥匙',
+    description: '通关整座塔（所有楼层全部完成）可获得语法钥匙（🔑），用于解锁特殊内容和成就。'
+  }
+];
 
 const gameStore = useGameStore();
 const settingsStore = useSettingsStore();
@@ -193,9 +235,9 @@ function onTowerClick(tower) {
   align-items: center;
 }
 
-.btn-back {
+.btn-back,
+.btn-help {
   padding: 0.5rem 1.2rem;
-  background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(180, 120, 255, 0.3);
   border-radius: 20px;
   color: #d4b8ff;
@@ -204,9 +246,22 @@ function onTowerClick(tower) {
   transition: all 0.2s;
 }
 
+.btn-back {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.btn-help {
+  background: rgba(102, 126, 234, 0.3);
+  border-color: rgba(102, 126, 234, 0.5);
+}
+
 .btn-back:hover {
   background: rgba(180, 120, 255, 0.25);
   border-color: #b078ff;
+}
+
+.btn-help:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
 /* ---- 副标题 ---- */

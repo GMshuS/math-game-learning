@@ -1,5 +1,12 @@
 <template>
   <div class="market-challenge">
+    <GameTutorial
+      v-if="showTutorial"
+      title="🏪 超市大挑战玩法说明"
+      :steps="marketTutorialSteps"
+      @close="closeTutorial"
+    />
+
     <div class="market-header">
       <div class="header-title">
         <span v-if="phase === 'select'">🏪 超市大挑战</span>
@@ -15,7 +22,10 @@
 
     <!-- Phase: Mode Selection -->
     <div v-if="phase === 'select'" class="mode-select">
-      <h2 class="game-title">🏪 超市大挑战</h2>
+      <div class="select-header">
+        <h2 class="game-title">🏪 超市大挑战</h2>
+        <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
+      </div>
       <p class="game-desc">在购物和收银场景中锻炼数学计算能力！</p>
 
       <div class="mode-grid">
@@ -219,6 +229,7 @@ import { ref, computed, onUnmounted } from 'vue';
 import { useCardStore } from '../store/cardStore';
 import { useMarketStore } from '../store/marketStore';
 import { modeConfig, denominations } from '../config/market';
+import GameTutorial from './GameTutorial.vue';
 
 const marketStore = useMarketStore();
 const emit = defineEmits(['back']);
@@ -229,6 +240,38 @@ const userAnswer = ref('');
 const feedbackMessage = ref('');
 const feedbackType = ref('');
 const changeCompleted = ref(false);
+const showTutorial = ref(false);
+
+const marketTutorialSteps = [
+  {
+    title: '选择模式',
+    description: '超市大挑战有四种模式：新手购物、购物小能手、收银员挑战和限时速算，每种模式适合不同年级，难度递增。'
+  },
+  {
+    title: '新手购物',
+    description: '适合1-2年级学生。根据购物清单计算商品总价，练习基本的加减法运算，轻松入门！'
+  },
+  {
+    title: '购物小能手',
+    description: '适合3年级以上学生。计算商品总价并进行找零计算，练习加减法和货币换算，提升心算能力。'
+  },
+  {
+    title: '收银员挑战',
+    description: '模拟真实收银员工作！计算总价后，用正确的硬币组合找零给顾客，锻炼综合计算能力。'
+  },
+  {
+    title: '限时速算',
+    description: '60秒限时挑战！答对一题得10分，连续答对有连击加成，尽可能多答题获得高分！'
+  },
+  {
+    title: '计分与奖励',
+    description: '答对题目获得分数，3星通关可获得卡牌碎片奖励。全部答对（完美通关）还可额外获得碎片！'
+  }
+];
+
+const closeTutorial = () => {
+  showTutorial.value = false;
+};
 
 // Mode cards for selection screen
 const modeCards = [
@@ -459,6 +502,29 @@ onUnmounted(() => {
   color: #94a3b8;
   margin: 0 0 2rem 0;
   font-size: 1rem;
+}
+
+.select-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.btn-help {
+  padding: 0.5rem 1.2rem;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.btn-help:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
 .mode-grid {

@@ -1,7 +1,15 @@
 <template>
   <div class="probability-lab">
+    <GameTutorial
+      v-if="showTutorial"
+      title="🎲 概率实验室玩法说明"
+      :steps="probabilityTutorialSteps"
+      @close="closeTutorial"
+    />
+
     <div class="top-bar">
       <button class="btn-back" @click="$emit('back')">← 返回</button>
+      <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
     </div>
 
     <!-- ====== 设置界面 ====== -->
@@ -138,8 +146,38 @@ import {
   getConfigForGrade,
   generateExperimentParams
 } from '../config/probability';
+import GameTutorial from './GameTutorial.vue';
 
 defineEmits(['back']);
+
+const showTutorial = ref(false);
+
+const probabilityTutorialSteps = [
+  {
+    title: '选择实验',
+    description: '概率实验室提供多种概率实验：抛硬币、掷骰子、摸球、转盘等。每种实验对应不同的概率概念，适合不同年级学习。'
+  },
+  {
+    title: '抛硬币',
+    description: '模拟抛硬币实验，观察正面和反面出现的频率。理论概率各为50%，适合低年级理解"可能性"概念。'
+  },
+  {
+    title: '掷骰子',
+    description: '模拟掷骰子实验，记录每个点数出现的次数。每个点数的理论概率为1/6，适合中高年级学习等可能事件。'
+  },
+  {
+    title: '设置模拟次数',
+    description: '通过滑块调整模拟次数（最少5-10次，最多依年级而定）。实验次数越多，实际频率越趋近理论概率，这就是"大数定律"。'
+  },
+  {
+    title: '对比分析',
+    description: '模拟完成后，对比"理论概率"与"实际频率"的差异。误差越小说明实验越接近理论值，引导学生理解概率的随机性与规律性。'
+  }
+];
+
+const closeTutorial = () => {
+  showTutorial.value = false;
+};
 
 const settingsStore = useSettingsStore();
 
@@ -791,8 +829,24 @@ watch(() => settingsStore.gradeRange.max, (newMax) => {
 
 .top-bar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
   padding: 1rem 2rem 0 0;
+}
+
+.btn-help {
+  padding: 0.5rem 1.2rem;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.btn-help:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 </style>

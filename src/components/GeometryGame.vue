@@ -1,10 +1,20 @@
 <template>
   <div class="geometry-game">
+    <GameTutorial
+      v-if="showTutorial"
+      title="📐 几何王国玩法说明"
+      :steps="geometryTutorialSteps"
+      @close="closeTutorial"
+    />
+
     <!-- 模式选择界面 -->
     <div v-if="phase === 'select'" class="selection-screen">
       <div class="select-header">
         <h2 class="screen-title" style="margin:0;">📐 几何王国</h2>
-        <button class="btn-back" @click="back">← 返回</button>
+        <div class="header-actions">
+          <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
+          <button class="btn-back" @click="back">← 返回</button>
+        </div>
       </div>
 
       <!-- 模式选择 -->
@@ -77,8 +87,58 @@ import { useCardStore } from '../store/cardStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useMathKnowledgeStore } from '../store/mathKnowledgeStore';
 import GeometryScene from '../scenes/GeometryScene';
+import GameTutorial from './GameTutorial.vue';
 
 const emit = defineEmits(['back']);
+
+const showTutorial = ref(false);
+
+const geometryTutorialSteps = [
+  {
+    title: '选择模式',
+    description: '几何王国有8种模式，涵盖图形识别、角度、面积、立体图形等几何知识，选择感兴趣的开始学习！'
+  },
+  {
+    title: '图形识别',
+    description: '观察图形，选择正确的名称或属性。认识平面图形（三角形、四边形、圆等）和立体图形。'
+  },
+  {
+    title: '角的世界',
+    description: '识别和度量各种角：锐角、直角、钝角、平角和周角。掌握角度概念，为几何学习打基础。'
+  },
+  {
+    title: '三角形探秘',
+    description: '探索三角形的分类（按边和按角）、内角和定理以及三边关系等核心知识。'
+  },
+  {
+    title: '面积挑战',
+    description: '计算各种图形的周长和面积，包括正方形、长方形、三角形、平行四边形和梯形等。'
+  },
+  {
+    title: '图形运动',
+    description: '学习平移、旋转、轴对称等图形变换，理解图形的运动和对称性。'
+  },
+  {
+    title: '立体工坊',
+    description: '计算立体图形的表面积和体积，包括长方体、正方体、圆柱体和圆锥体等。'
+  },
+  {
+    title: '圆的奥秘',
+    description: '认识圆的半径、直径、圆周率π，学习圆的周长和面积计算，以及扇形的相关知识。'
+  },
+  {
+    title: '三视图',
+    description: '从正面、侧面、上面三个方向观察立体图形，培养空间想象力和三维思维能力。'
+  },
+  {
+    title: '计分规则',
+    description: '答对一题得10分，全部答完后根据正确率获得1-3颗星评价。正确率越高，星级越高！'
+  }
+];
+
+const closeTutorial = () => {
+  showTutorial.value = false;
+};
 
 const settingsStore = useSettingsStore();
 
@@ -593,6 +653,27 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-help {
+  padding: 0.5rem 1.2rem;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.btn-help:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
 .result-top-bar {

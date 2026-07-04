@@ -1,7 +1,15 @@
 <template>
   <div class="chart-game">
+    <GameTutorial
+      v-if="showTutorial"
+      title="📊 统计图表玩法说明"
+      :steps="chartTutorialSteps"
+      @close="closeTutorial"
+    />
+
     <div class="top-bar">
       <button class="btn-back" @click="$emit('back')">← 返回</button>
+      <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
     </div>
 
     <!-- 设置界面 -->
@@ -238,8 +246,38 @@ import { ref, computed } from 'vue';
 import { useSettingsStore } from '../store/settingsStore';
 import { useMathKnowledgeStore } from '../store/mathKnowledgeStore';
 import { generateChart } from '../config/charts';
+import GameTutorial from './GameTutorial.vue';
 
 defineEmits(['back']);
+
+const showTutorial = ref(false);
+
+const chartTutorialSteps = [
+  {
+    title: '选择图表类型',
+    description: '柱状图：比较不同类别的数量大小；折线图：展示数据的变化趋势；扇形图：显示各部分占整体的比例。也可以选择"随机"模式，系统自动分配图表类型。'
+  },
+  {
+    title: '柱状图',
+    description: '用不同高度的柱子表示数据的大小。观察柱子的高度，比较不同项目之间的数值差异，回答相关问题。'
+  },
+  {
+    title: '折线图',
+    description: '用点连成的折线表示数据的变化趋势。观察线段的上升或下降，判断数据是增加还是减少，找出最大值和最小值。'
+  },
+  {
+    title: '扇形图',
+    description: '用不同颜色的扇区表示各部分占总体的百分比。扇区越大，占比越高。所有扇区加起来等于100%，适合展示比例关系。'
+  },
+  {
+    title: '答题与计分',
+    description: '读图后回答相关问题，每题答对得10分。完成所有题目后根据正确率获得1-3星评价（90%以上3星，70%以上2星，50%以上1星）。'
+  }
+];
+
+const closeTutorial = () => {
+  showTutorial.value = false;
+};
 
 const settingsStore = useSettingsStore();
 
@@ -774,8 +812,24 @@ function backToMenu() {
 
 .top-bar {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
   padding: 1rem 2rem 0 0;
+}
+
+.btn-help {
+  padding: 0.5rem 1.2rem;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.btn-help:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 </style>

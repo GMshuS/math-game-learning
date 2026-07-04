@@ -1,8 +1,18 @@
 <template>
   <div class="review-session">
+    <GameTutorial
+      v-if="showTutorial"
+      title="📚 复习模式玩法说明"
+      :steps="tutorialSteps"
+      @close="closeTutorial"
+    />
+
     <div class="review-header">
       <h2>📚 复习模式</h2>
-      <button class="btn-back" @click="$emit('back')">← 返回</button>
+      <div class="header-actions">
+        <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
+        <button class="btn-back" @click="$emit('back')">← 返回</button>
+      </div>
     </div>
 
     <!-- 阶段①: 检查待复习 -->
@@ -155,6 +165,7 @@
 
 <script setup>
 import { ref, computed, onBeforeUnmount } from 'vue';
+import GameTutorial from './GameTutorial.vue';
 import { useMathKnowledgeStore } from '../store/mathKnowledgeStore';
 import { useEnglishKnowledgeStore } from '../store/englishKnowledgeStore';
 import { mathKnowledgeNodes, englishKnowledgeNodes } from '../config/knowledge';
@@ -172,6 +183,35 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['back']);
+
+const showTutorial = ref(false);
+
+const tutorialSteps = [
+  {
+    title: '待复习知识点',
+    description: '系统根据艾宾浩斯遗忘曲线自动计算复习时间，列出到期需要复习的知识点，按紧急程度排序。'
+  },
+  {
+    title: '开始复习',
+    description: '点击「开始复习」进入答题模式，系统会根据你的年级生成对应难度的题目。'
+  },
+  {
+    title: '答题与反馈',
+    description: '每道题都有即时反馈，答对显示绿色标记，答错显示正确答案，帮助你巩固记忆。'
+  },
+  {
+    title: '自评机制',
+    description: '每道题答题后需进行自评：「忘记了」「有点困难」「很轻松」。自评结果会动态调整该知识点的复习间隔。'
+  },
+  {
+    title: '复习统计',
+    description: '复习结束后可查看总题数、答对数和自评分布，全面了解知识掌握情况。'
+  }
+];
+
+const closeTutorial = () => {
+  showTutorial.value = false;
+};
 
 const isSingleSubject = computed(() => props.subject !== 'all');
 
@@ -424,6 +464,27 @@ collectDueItems(); // 组件初始化时收集
 .review-header h2 {
   flex: 1;
   margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-help {
+  padding: 0.5rem 1.2rem;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.btn-help:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
 .btn-back {

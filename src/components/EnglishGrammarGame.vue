@@ -1,5 +1,12 @@
 <template>
   <div class="english-grammar-game">
+    <GameTutorial
+      v-if="showTutorial"
+      title="🏰 语法闯关玩法说明"
+      :steps="grammarGameTutorialSteps"
+      @close="closeTutorial"
+    />
+
     <!-- ========== 状态栏 ========== -->
     <header class="status-bar">
       <div class="status-left">
@@ -9,6 +16,9 @@
           </span>
         </span>
         <span class="tower-name">🏰 {{ towerData?.name || '' }} {{ grammarStore.currentFloor > 0 ? grammarStore.currentFloor + 'F' : '' }}</span>
+      </div>
+      <div class="status-center">
+        <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
       </div>
       <div class="status-right">
         <span class="score-display">⭐ {{ grammarStore.score }}</span>
@@ -392,6 +402,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useEnglishGrammarStore } from '../store/englishGrammarStore';
 import { getTowerById, getFloorByNumber } from '../config/english/grammar';
 import englishSpeech from '../utils/englishSpeech';
+import GameTutorial from './GameTutorial.vue';
 import EnglishVoiceCompare from './EnglishVoiceCompare.vue';
 import EnglishCategorize from './EnglishCategorize.vue';
 import EnglishMatch from './EnglishMatch.vue';
@@ -412,6 +423,44 @@ const emit = defineEmits(['back', 'towerComplete']);
 
 // ============ Store ============
 const grammarStore = useEnglishGrammarStore();
+
+// ============ 玩法说明 ============
+const showTutorial = ref(false);
+
+const closeTutorial = () => {
+  showTutorial.value = false;
+};
+
+const grammarGameTutorialSteps = [
+  {
+    title: '教学关',
+    description: '进入新语法塔后，先观看本塔的语法规则教学，学习核心知识点和例句后再开始闯关。'
+  },
+  {
+    title: '答题闯关',
+    description: '教学关之后进入正式挑战，每层包含多道题目，需要全部解答才能通关。'
+  },
+  {
+    title: '题型介绍',
+    description: '包含选择题、填空题、排序题、分类题、配对题、看图题、动词变形、句式转换等多种题型，丰富不枯燥。'
+  },
+  {
+    title: '生命力',
+    description: '每层开始时有一定数量的生命力（❤️），答错题目会扣除生命力。生命力归零则本层挑战失败。'
+  },
+  {
+    title: '计时规则',
+    description: '每道题限时15秒作答，超时自动判错并进入下一题。注意顶部计时条的变化！'
+  },
+  {
+    title: '连击与计分',
+    description: '连续答对可累积连击（🔥），连击越高单题得分越多。答错会打断连击计数。'
+  },
+  {
+    title: 'BOSS战',
+    description: '每层最后有BOSS战，需要连续答对指定次数才能击败BOSS通关。BOSS战时生命力不会减少！'
+  }
+];
 
 // ============ 本地状态 ============
 const answered = ref(false);
@@ -838,6 +887,11 @@ onUnmounted(() => {
   font-weight: bold;
 }
 
+.status-center {
+  display: flex;
+  align-items: center;
+}
+
 .status-right {
   display: flex;
   align-items: center;
@@ -848,6 +902,22 @@ onUnmounted(() => {
   font-size: 1rem;
   color: #ffd700;
   font-weight: bold;
+}
+
+.btn-help {
+  padding: 0.35rem 0.9rem;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-help:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
 .combo-display {

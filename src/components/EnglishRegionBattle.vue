@@ -1,5 +1,11 @@
 <template>
   <div class="english-region-battle">
+    <GameTutorial
+      v-if="showTutorial"
+      title="⚔️ 区域对战玩法说明"
+      :steps="tutorialSteps"
+      @close="closeTutorial"
+    />
     <div class="top-bar">
       <button class="btn-back" @click="handleBack">← 返回区域</button>
     </div>
@@ -12,6 +18,7 @@
     <!-- 准备阶段 -->
     <div v-else-if="phase === 'prepare'" class="prepare-phase">
       <div class="boss-intro-card">
+        <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
         <div class="boss-big-icon">{{ bossConfig.icon || '👹' }}</div>
         <h2>{{ bossConfig.name }}</h2>
         <p class="boss-desc">击败 {{ bossConfig.name }}，获得区域精灵！</p>
@@ -200,6 +207,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import GameTutorial from './GameTutorial.vue';
 import { useEnglishGrammarStore } from '../store/englishGrammarStore';
 import { useEnglishSpiritStore } from '../store/englishSpiritStore';
 import { useEnglishAdventureStore } from '../store/englishAdventureStore';
@@ -219,6 +227,30 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['back', 'regionComplete']);
+
+// ============ 玩法说明 ============
+const showTutorial = ref(false);
+const tutorialSteps = [
+  {
+    title: 'BOSS 战斗机制',
+    description: '击败区域 BOSS 即可获得该区域的精灵。BOSS 拥有 HP 值，你需要通过连续答对问题来对其造成伤害。'
+  },
+  {
+    title: '连击规则',
+    description: '连续答对 2 题以上即可对 BOSS 造成伤害，连击数越高伤害越大（每击最多 5 点）。答错会中断连击，但不会伤害 BOSS。'
+  },
+  {
+    title: '失败条件',
+    description: '累计答错 5 次将导致战斗失败。注意控制错误率，保持连击才能高效击败 BOSS。'
+  },
+  {
+    title: '精灵收集',
+    description: '成功击败 BOSS 后，你将获得该区域的精灵，并解锁新的冒险区域和挑战内容。'
+  }
+];
+function closeTutorial() {
+  showTutorial.value = false;
+}
 
 // ============ Stores ============
 const grammarStore = useEnglishGrammarStore();
@@ -598,6 +630,21 @@ onUnmounted(() => {
 
 .btn-back:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.btn-help {
+  padding: 0.5rem 1.2rem;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.btn-help:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
 /* ========== 加载状态 ========== */

@@ -1,10 +1,20 @@
 <template>
   <div class="targeted-training">
+    <GameTutorial
+      v-if="showTutorial"
+      title="🎯 针对性训练玩法说明"
+      :steps="tutorialSteps"
+      @close="closeTutorial"
+    />
+
     <!-- ========== 选择阶段 ========== -->
     <div v-if="phase === 'select'" class="tt-phase">
       <div class="tt-header">
         <h2>🎯 针对性训练</h2>
-        <button class="back-btn" @click="$emit('back')">← 返回</button>
+        <div class="header-actions">
+          <button class="btn-help" @click="showTutorial = true">❓ 玩法说明</button>
+          <button class="back-btn" @click="$emit('back')">← 返回</button>
+        </div>
       </div>
 
       <p class="tt-intro">选择你要集中训练的知识点，系统将根据年级生成对应难度的题目。</p>
@@ -168,6 +178,7 @@
 
 <script setup>
 import { ref, computed, onUnmounted } from 'vue';
+import GameTutorial from './GameTutorial.vue';
 import { useCardStore } from '../store/cardStore';
 import { useMathKnowledgeStore } from '../store/mathKnowledgeStore';
 import { useEnglishKnowledgeStore } from '../store/englishKnowledgeStore';
@@ -185,6 +196,35 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['back']);
+
+const showTutorial = ref(false);
+
+const tutorialSteps = [
+  {
+    title: '选择知识点',
+    description: '系统会自动列出你的薄弱知识点（错误率 > 30% 的知识点）。你也可以选择多个知识点进行集中训练。'
+  },
+  {
+    title: '设置题量',
+    description: '可选择 10 题、20 题或 30 题的训练量，系统会根据你的年级生成对应难度的题目。'
+  },
+  {
+    title: '开始训练',
+    description: '点击「开始训练」进入答题模式，每道题都有即时反馈，答对/答错一目了然。'
+  },
+  {
+    title: '答题反馈',
+    description: '答对显示绿色标记并累积连击数，答错显示正确答案。连续答对可获得额外奖励！'
+  },
+  {
+    title: '查看结果',
+    description: '训练结束后可查看详细统计：总题数、正确率、最佳连击等，帮助追踪学习进步。'
+  }
+];
+
+const closeTutorial = () => {
+  showTutorial.value = false;
+};
 
 const isEnglish = computed(() => props.subject === 'english');
 
@@ -389,6 +429,27 @@ onUnmounted(() => {
 .tt-header h2 {
   flex: 1;
   margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-help {
+  padding: 0.5rem 1.2rem;
+  background: rgba(102, 126, 234, 0.3);
+  border: 1px solid rgba(102, 126, 234, 0.5);
+  border-radius: 20px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.btn-help:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
 .back-btn {
