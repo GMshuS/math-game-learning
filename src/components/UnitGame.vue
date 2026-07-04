@@ -171,6 +171,13 @@ function startGame(categoryId) {
   correctAnswers.value = 0;
   gameOver.value = false;
   answered.value = false;
+  // 校验年级是否适配所选类别，若不适配则直接结束并提示
+  const testQuestion = generateConversionQuestion(categoryId, settingsStore.gradeRange.max);
+  if (!testQuestion) {
+    console.warn('当前年级不支持此类别，请选择其他类别或调整年级设置');
+    gameOver.value = true;
+    return;
+  }
   generateQuestion();
 }
 
@@ -181,6 +188,10 @@ function generateQuestion() {
     answered.value = false;
     selectedAnswer.value = null;
     isCorrect.value = false;
+  } else {
+    // 生成失败时的兜底：显示友好提示并回到类别选择
+    console.warn('当前年级不支持此类别，请选择其他类别');
+    gameOver.value = true;
   }
 }
 
@@ -202,7 +213,12 @@ function selectAnswer(choice) {
 
   // 记录知识点答题结果
   const mathKnowledgeStore = useMathKnowledgeStore();
-  const knowledgeId = categoryToKnowledgeId[currentQuestion.value.categoryId] || 'unit_length';
+  const categoryId = currentQuestion.value.categoryId || currentCategory.value;
+  const knowledgeId = categoryToKnowledgeId[categoryId];
+  if (!knowledgeId) {
+    console.warn('未知单位类别:', categoryId, '跳过知识点记录');
+    return;
+  }
   mathKnowledgeStore.recordResult(knowledgeId, correct);
 }
 

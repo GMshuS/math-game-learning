@@ -32,7 +32,7 @@ const mathKnowledgeNodes = [
   { id: 'unit_length', label: '长度单位', icon: '📏', gradeRange: [2, 6] },
   { id: 'unit_mass', label: '重量单位', icon: '⚖️', gradeRange: [2, 6] },
   { id: 'unit_volume', label: '体积单位', icon: '🧊', gradeRange: [3, 6] },
-  { id: 'unit_time', label: '时间单位', icon: '⏱️', gradeRange: [1, 6] },
+  { id: 'unit_time', label: '时间单位', icon: '⏱️', gradeRange: [3, 6] },
   { id: 'unit_area', label: '面积单位', icon: '📐', gradeRange: [3, 6] },
   { id: 'unit_currency', label: '货币单位', icon: '💰', gradeRange: [2, 6] },
 

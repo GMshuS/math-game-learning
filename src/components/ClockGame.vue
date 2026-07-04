@@ -166,7 +166,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import Phaser from 'phaser';
 import { useSettingsStore } from '../store/settingsStore';
 import ClockScene from '../scenes/ClockScene';
-import { generateRandomTime, getConfigForGrade } from '../config/clock';
+import { generateRandomTime, generateWrongTimes } from '../config/clock';
 
 defineEmits(['back']);
 
@@ -196,8 +196,9 @@ const gameContainer = ref(null);
 let game = null;
 
 const accuracy = computed(() => {
-  if (totalQuestions.value === 0) return 0;
-  return Math.round((correctCount.value / totalQuestions.value) * 100);
+  const answered = currentQuestionIndex.value; // 已答题目数为当前索引
+  if (answered === 0) return 0;
+  return Math.round((correctCount.value / answered) * 100);
 });
 
 /**
@@ -208,11 +209,12 @@ function getScene() {
 }
 
 /**
- * 设置钟面时间
+ * 设置钟面时间（带游戏实例活跃性检查）
  */
 function setClockTime(hour, minute) {
+  if (!game) return;
   const scene = getScene();
-  if (scene) {
+  if (scene && scene.scene && scene.scene.isActive()) {
     scene.animateToTime(hour, minute);
   }
 }
@@ -226,32 +228,11 @@ function generateQuestion() {
 
   if (selectedMode.value === 'read') {
     // 模式1：显示钟面 → 4选1
-    const config = getConfigForGrade(settingsStore.gradeRange.max);
-    // 直接构建 4 选 1 题目，无需调用 generateClockQuestion
     currentAnswer.value = time.display;
 
-    // 构建干扰选项
-    const wrongSet = new Set();
-    const possibleMins = [0, 15, 30, 45];
-    while (wrongSet.size < 3) {
-      let wrongHour = time.hour + (Math.random() < 0.5 ? 1 : -1) * Math.floor(Math.random() * 3 + 1);
-      if (wrongHour < 1) wrongHour += 12;
-      if (wrongHour > 12) wrongHour -= 12;
-      let wrongMin = time.minute;
-      if (config.step >= 60) {
-        wrongMin = 0;
-      } else {
-        wrongMin = time.minute + (Math.random() < 0.5 ? 1 : -1) * Math.floor(Math.random() * 4 + 1) * config.step;
-        if (wrongMin >= 60 || wrongMin < 0) {
-          wrongMin = possibleMins[Math.floor(Math.random() * possibleMins.length)];
-        }
-      }
-      const display = `${wrongHour}:${String(wrongMin).padStart(2, '0')}`;
-      if (display !== time.display) {
-        wrongSet.add(display);
-      }
-    }
-    const choices = [...wrongSet, time.display];
+    // 使用 clock.js 的干扰选项生成（含 maxAttempts 保护）
+    const wrongOptions = generateWrongTimes(time, settingsStore.gradeRange.max, 3);
+    const choices = [time.display, ...wrongOptions];
     // 打乱
     for (let i = choices.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));

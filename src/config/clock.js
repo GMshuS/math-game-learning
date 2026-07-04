@@ -221,7 +221,7 @@ export function generateIntervalQuestion(grade) {
  * @param {number} count
  * @returns {string[]}
  */
-function generateWrongTimes(correctTime, grade, count) {
+export function generateWrongTimes(correctTime, grade, count) {
   const wrongTimes = new Set();
   const config = getConfigForGrade(grade);
   const step = config.step;
@@ -268,5 +268,6 @@ export default {
   getConfigForGrade,
   generateRandomTime,
   generateClockQuestion,
-  generateIntervalQuestion
+  generateIntervalQuestion,
+  generateWrongTimes
 };

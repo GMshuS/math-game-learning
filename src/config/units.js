@@ -105,6 +105,8 @@ export const unitCategories = {
       high: ['cm2', 'dm2', 'm2', 'hm2', 'km2']
     },
     conversions: [
+      { from: 'cm2', to: 'm2', factor: 10000 },
+      { from: 'm2', to: 'cm2', factor: 10000 },
       { from: 'cm2', to: 'dm2', factor: 100 },
       { from: 'dm2', to: 'cm2', factor: 100 },
       { from: 'dm2', to: 'm2', factor: 100 },
@@ -241,7 +243,13 @@ export function generateConversionQuestion(categoryId, grade) {
     if (Math.random() < 0.3) fromValue = fromValue * 10;
   }
 
-  const answer = fromValue * factor;
+  // 根据换算方向决定乘除：小→大用除法，大→小用乘法
+  // fromUnit.base / toUnit.base 即换算比率（如 cm→m = 0.01/1 = 0.01）
+  let answer = fromValue * (fromUnit.base / toUnit.base);
+  // 对涉及非精确换算比率的单位进行浮点取整（如亩 → 保留 4 位小数）
+  if (fromUnit.id === 'mu' || toUnit.id === 'mu') {
+    answer = Math.round(answer * 10000) / 10000;
+  }
 
   // 生成干扰选项
   const wrongOptions = generateWrongConversionOptions(answer, factor, 3);
@@ -269,13 +277,23 @@ function generateWrongConversionOptions(correct, factor, count) {
   pool.add(correct + factor);
   pool.add(correct - factor > 0 ? correct - factor : correct + factor);
   pool.add(correct * 2);
-  pool.add(Math.round(correct / 2));
+  if (Math.round(correct / 2) !== correct) {
+    pool.add(Math.round(correct / 2));
+  }
   pool.add(correct + Math.round(factor / 2));
 
   // 去除正确值
   pool.delete(correct);
 
-  return Array.from(pool).filter(n => n > 0).slice(0, count);
+  let result = Array.from(pool).filter(n => n > 0 && n !== correct);
+  // 不足 count 个时补充生成
+  while (result.length < count) {
+    const extra = correct + Math.floor(Math.random() * factor * 2 + 1) * (Math.random() < 0.5 ? 1 : -1);
+    if (extra > 0 && extra !== correct && !result.includes(extra)) {
+      result.push(extra);
+    }
+  }
+  return result.slice(0, count);
 }
 
 /**

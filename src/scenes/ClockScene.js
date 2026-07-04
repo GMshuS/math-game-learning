@@ -265,6 +265,7 @@ export default class ClockScene extends Phaser.Scene {
 
     const animate = () => {
       if (this._destroyed) return;
+      if (!this.scene || !this.scene.isActive()) return;
 
       const elapsed = Date.now() - startTime;
       const progress = Math.min(1, elapsed / duration);
