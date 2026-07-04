@@ -120,8 +120,7 @@ const sections = [
     icon: '🔢',
     games: [
       { id: 'speedChallenge', name: '速算竞技场', icon: '⚡', description: '限时答题，挑战手速', cardClass: 'speed-card', comingSoon: false },
-      { id: 'market', name: '超市大挑战', icon: '🏪', description: '购物达人，收银小能手', cardClass: 'market-card', comingSoon: false },
-      { id: 'wordFill', name: '应用与填空', icon: '📝', description: '应用题+填空题，连续挑战', cardClass: 'wordfill-card', comingSoon: false }
+      { id: 'market', name: '超市大挑战', icon: '🏪', description: '购物达人，收银小能手', cardClass: 'market-card', comingSoon: false }
     ]
   },
   {
@@ -155,7 +154,8 @@ const sections = [
     label: '综合挑战',
     icon: '⚔️',
     games: [
-      { id: 'adventure', name: '冒险模式', icon: '⚔️', description: '挑战数学怪物，提升角色等级', cardClass: 'adventure-card', comingSoon: false }
+      { id: 'adventure', name: '冒险模式', icon: '⚔️', description: '挑战数学怪物，提升角色等级', cardClass: 'adventure-card', comingSoon: false },
+      { id: 'wordFill', name: '应用与填空', icon: '📝', description: '应用题+填空题，连续挑战', cardClass: 'wordfill-card', comingSoon: false }
     ]
   }
 ];
