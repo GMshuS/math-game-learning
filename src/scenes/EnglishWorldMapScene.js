@@ -25,7 +25,7 @@ export default class EnglishWorldMapScene extends Phaser.Scene {
   _setTimeout(fn, delay) {
     const id = setTimeout(() => {
       this._timeoutIds = this._timeoutIds.filter(t => t !== id);
-      if (this.scene && this.scene.isActive()) fn();
+      if (this.scene && typeof this.scene.isActive === 'function' && this.scene.isActive()) fn();
     }, delay);
     this._timeoutIds.push(id);
     return id;

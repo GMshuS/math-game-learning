@@ -418,6 +418,7 @@ import EnglishVerbTable from './EnglishVerbTable.vue';
 import EnglishTransform from './EnglishTransform.vue';
 import EnglishConnector from './EnglishConnector.vue';
 import EnglishDialogueChoice from './EnglishDialogueChoice.vue';
+import { shuffleArray } from '../utils/shuffle';
 
 const props = defineProps({
   towerId: {
@@ -560,16 +561,6 @@ function renderSentence(sentence, blanks) {
 function renderFillSentence(sentence) {
   if (!sentence) return '';
   return sentence.replace(/___/g, '______');
-}
-
-// ============ 洗牌工具 ============
-function shuffleArray(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
 }
 
 // ============ 语音播放 ============

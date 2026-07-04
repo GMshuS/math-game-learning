@@ -5,7 +5,7 @@
  * 迁移：phrase（常用语塔）和 dialogue（情景对话塔）已移至 speaking.js
  *
  * 分类说明：
- *   morphology（词法篇）: be-verb, noun, pronoun, article, preposition, comparative
+ *   morphology（词法篇）: beVerb, noun, pronoun, article, preposition, comparative
  *   tense（时态篇）: presentSimple, presentContinuous, futureTense, pastTense
  *   syntax（句法篇）: questionForm, thereBe, conjunction, basicClause
  *
@@ -16,9 +16,9 @@
 import { speakingTowers } from './speaking';
 
 export const grammarTowers = [
-  // 1. Be动词塔 (be-verb)
+  // 1. Be动词塔 (beVerb)
   {
-    id: 'be-verb',
+    id: 'beVerb',
     name: 'Be动词塔',
     category: 'morphology',
     icon: '📖',
@@ -628,7 +628,89 @@ export const grammarTowers = [
       }
     ]
   },
-  // 14. 连词塔 (conjunction)
+  // 14. 形容词/副词塔 (adjAdv)
+  {
+    id: 'adjAdv',
+    name: '形容词/副词塔',
+    category: 'morphology',
+    icon: '🎨',
+    description: '学习形容词和副词的用法与区别',
+    unlockLevel: 1,
+    tutorial: {
+      title: '形容词和副词是什么？',
+      rules: [
+        { rule: '形容词 (Adjective)', example: 'a beautiful flower, a tall man', explanation: '形容词修饰名词，表示特征' },
+        { rule: '副词 (Adverb)', example: 'run quickly, very beautiful', explanation: '副词修饰动词、形容词或其他副词' },
+        { rule: '形容词↔副词转换', example: 'quick → quickly, careful → carefully', explanation: '多数副词由形容词 + -ly 构成' }
+      ],
+      tips: ['形容词放在名词前', '副词放在动词后', 'well 是 good 的副词形式', 'fast 既是形容词也是副词']
+    },
+    floors: [
+      { floor: 1, type: 'choice', title: '选择题 (形容词)', description: '选择正确的形容词形式', questions: [] },
+      { floor: 2, type: 'choice', title: '选择题 (副词)', description: '选择正确的副词形式', questions: [] },
+      { floor: 3, type: 'choice', title: '选择题 (形容词/副词辨析)', description: '选择正确的形容词或副词', questions: [] },
+      { floor: 4, type: 'fillBlank', title: '填空题 (形容词)', description: '填入正确的形容词形式', questions: [] },
+      { floor: 5, type: 'fillBlank', title: '填空题 (副词)', description: '填入正确的副词形式', questions: [] },
+      { floor: 6, type: 'fillBlank', title: '填空题 (形容词/副词综合)', description: '根据语境填入正确的形容词或副词', questions: [] },
+      {
+        floor: 7, type: 'dragOrder', title: '排序题 (形容词/副词)', description: '拖拽单词组成正确的句子',
+        questions: [
+          { sentence: '她跑得很快。', blanks: [], words: ['She', 'runs', 'very', 'quickly'], answer: 'She runs very quickly.', options: [], voicePrompt: 'She runs very quickly.' }
+        ]
+      },
+      {
+        floor: 8, type: 'bossFight', title: 'BOSS战 (形容词/副词魔王)', description: '找出并修复形容词/副词用法中的错误！',
+        questions: [
+          { wrongSentence: 'She sings beautiful.', answer: 'beautifully', options: ['beautiful', 'beautifully', 'beauty'], explanation: '修饰动词 sing 要用副词 beautifully', voicePrompt: 'beautifully' },
+          { wrongSentence: 'He is a carefully driver.', answer: 'careful', options: ['careful', 'carefully', 'care'], explanation: '修饰名词 driver 要用形容词 careful', voicePrompt: 'careful' }
+        ],
+        boss: { name: '语法魔王', icon: '👹', hp: 3 },
+        winCondition: { consecutiveCorrect: 3 }
+      }
+    ]
+  },
+  // 15. 句子结构塔 (sentenceStructure)
+  {
+    id: 'sentenceStructure',
+    name: '句子结构塔',
+    category: 'syntax',
+    icon: '📐',
+    description: '学习英语句子的基本结构和语序规则',
+    unlockLevel: 3,
+    tutorial: {
+      title: '句子结构是什么？',
+      rules: [
+        { rule: '基本结构：主语 + 谓语', example: 'I run. / She sings.', explanation: '最简单的句子由主语和谓语构成' },
+        { rule: '主谓宾结构 (SVO)', example: 'I like apples. / He reads books.', explanation: '及物动词后面需要跟宾语' },
+        { rule: '主系表结构 (SVC)', example: 'She is happy. / They are students.', explanation: '系动词后面跟表语说明主语状态' }
+      ],
+      tips: ['英语语序是 SVO (主谓宾)', '疑问句要倒装', '否定句加助动词', '时间状语常在句末']
+    },
+    floors: [
+      { floor: 1, type: 'choice', title: '选择题 (句子成分)', description: '识别句子中的主语、谓语、宾语', questions: [] },
+      { floor: 2, type: 'choice', title: '选择题 (语序)', description: '选择正确的英语语序', questions: [] },
+      { floor: 3, type: 'choice', title: '选择题 (句子类型)', description: '识别陈述句、疑问句、祈使句', questions: [] },
+      { floor: 4, type: 'fillBlank', title: '填空题 (句子补全)', description: '补全句子缺少的成分', questions: [] },
+      { floor: 5, type: 'fillBlank', title: '填空题 (语序纠正)', description: '按正确语序填入单词', questions: [] },
+      { floor: 6, type: 'fillBlank', title: '填空题 (句子结构综合)', description: '根据中文提示补全英文句子', questions: [] },
+      {
+        floor: 7, type: 'dragOrder', title: '排序题 (句子结构)', description: '拖拽单词组成正确的句子',
+        questions: [
+          { sentence: '她每天早上喝牛奶。', blanks: [], words: ['She', 'milk', 'every morning', 'drinks'], answer: 'She drinks milk every morning.', options: [], voicePrompt: 'She drinks milk every morning.' }
+        ]
+      },
+      {
+        floor: 8, type: 'bossFight', title: 'BOSS战 (句子结构魔王)', description: '找出并修复句子结构中的错误！',
+        questions: [
+          { wrongSentence: 'Like I apples.', answer: 'I like apples', options: ['I like apples', 'Apples I like', 'Like I apples'], explanation: '英语语序是主语+谓语+宾语 (SVO)', voicePrompt: 'I like apples' },
+          { wrongSentence: 'She a teacher is.', answer: 'is a teacher', options: ['is a teacher', 'a teacher is', 'she is'], explanation: '系动词 be 要放在主语之后、表语之前', voicePrompt: 'She is a teacher' }
+        ],
+        boss: { name: '语法魔王', icon: '👹', hp: 3 },
+        winCondition: { consecutiveCorrect: 3 }
+      }
+    ]
+  },
+  // 16. 连词塔 (conjunction)
   {
     id: 'conjunction',
     name: '连词塔',

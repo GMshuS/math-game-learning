@@ -103,14 +103,15 @@
 
           <!-- fillBlank 填空题 -->
           <div v-else-if="currentQuestion.type === 'fillBlank'" class="fill-question">
-            <p class="question-sentence">{{ currentQuestion.sentence || '' }}</p>
+            <!-- v-html safe: renderSentence() sanitizes via escapeHtml() before inserting HTML -->
+            <p class="question-sentence" v-html="renderSentence(currentQuestion)" />
             <div class="input-area">
               <input
                 v-model="fillInput"
                 type="text"
                 class="fill-input"
                 :class="{ correct: answered && answeredCorrectly, wrong: answered && !answeredCorrectly }"
-                placeholder="请输入答案"
+                placeholder="Type your answer"
                 :disabled="answered"
                 @keyup.enter="submitFill"
               >
@@ -125,6 +126,78 @@
             <div v-if="answered && !answeredCorrectly" class="feedback-wrong">
               正确答案: <strong>{{ currentQuestion.answer }}</strong>
             </div>
+          </div>
+
+          <!-- dragOrder 排序题 -->
+          <div v-else-if="currentQuestion.type === 'dragOrder'" class="question-type">
+            <EnglishQuestionRenderer
+              :question="currentQuestion"
+              :disabled="answered"
+              @answer="handleAnswer"
+            />
+          </div>
+
+          <!-- categorize 分类题 -->
+          <div v-else-if="currentQuestion.type === 'categorize'" class="question-type">
+            <EnglishCategorize
+              :question="currentQuestion"
+              :disabled="answered"
+              @answer="handleAnswer"
+            />
+          </div>
+
+          <!-- match 配对题 -->
+          <div v-else-if="currentQuestion.type === 'match'" class="question-type">
+            <EnglishMatch
+              :question="currentQuestion"
+              :disabled="answered"
+              @answer="handleAnswer"
+            />
+          </div>
+
+          <!-- imageChoice 看图题 -->
+          <div v-else-if="currentQuestion.type === 'imageChoice'" class="question-type">
+            <EnglishImageChoice
+              :question="currentQuestion"
+              :disabled="answered"
+              @answer="handleAnswer"
+            />
+          </div>
+
+          <!-- verbTable 动词变形表 -->
+          <div v-else-if="currentQuestion.type === 'verbTable'" class="question-type">
+            <EnglishVerbTable
+              :question="currentQuestion"
+              :disabled="answered"
+              @answer="handleAnswer"
+            />
+          </div>
+
+          <!-- transform 句式转换题 -->
+          <div v-else-if="currentQuestion.type === 'transform'" class="question-type">
+            <EnglishTransform
+              :question="currentQuestion"
+              :disabled="answered"
+              @answer="handleAnswer"
+            />
+          </div>
+
+          <!-- connector 连词连接题 -->
+          <div v-else-if="currentQuestion.type === 'connector'" class="question-type">
+            <EnglishConnector
+              :question="currentQuestion"
+              :disabled="answered"
+              @answer="handleAnswer"
+            />
+          </div>
+
+          <!-- dialogueChoice 情景对话选择题 -->
+          <div v-else-if="currentQuestion.type === 'dialogueChoice'" class="question-type">
+            <EnglishDialogueChoice
+              :question="currentQuestion"
+              :disabled="answered"
+              @answer="handleAnswer"
+            />
           </div>
 
           <!-- 其他题型兜底显示为选择 -->
@@ -226,6 +299,16 @@ import { useEnglishAdventureStore } from '../store/englishAdventureStore';
 import { getTowerById } from '../config/english/grammar';
 import { getSpirit } from '../config/english/spirits';
 import { getEnglishRegion } from '../config/english/adventure';
+import { generateQuestionSet, getRegisteredTypes } from '../utils/englishQuestionGenerator';
+import { shuffleArray } from '../utils/shuffle';
+import EnglishQuestionRenderer from './EnglishQuestionRenderer.vue';
+import EnglishCategorize from './EnglishCategorize.vue';
+import EnglishMatch from './EnglishMatch.vue';
+import EnglishImageChoice from './EnglishImageChoice.vue';
+import EnglishVerbTable from './EnglishVerbTable.vue';
+import EnglishTransform from './EnglishTransform.vue';
+import EnglishConnector from './EnglishConnector.vue';
+import EnglishDialogueChoice from './EnglishDialogueChoice.vue';
 
 const props = defineProps({
   regionId: {
@@ -295,8 +378,8 @@ const adventureStore = useEnglishAdventureStore();
 // ============ 状态 ============
 const loading = ref(true);
 const phase = ref('prepare'); // 'prepare' | 'battling' | 'victory' | 'defeat'
-const currentBossHp = ref(100);
-const maxBossHp = ref(100);
+const currentBossHp = ref(0);
+const maxBossHp = ref(0);
 const combo = ref(0);
 const maxComboRecord = ref(0);
 const answered = ref(false);
@@ -308,7 +391,8 @@ const feedbackMessage = ref('');
 const feedbackType = ref('');
 const correctCount = ref(0);
 const wrongCount = ref(0);
-const maxErrors = ref(5); // 允许的最大错误次数，超过则战斗失败
+// 根据 BOSS HP 动态计算允许的错误次数（HP 每 50 点允许 1 次错误，最少 3 次，最多 20 次）
+const maxErrors = computed(() => Math.max(3, Math.min(20, Math.floor(maxBossHp.value / 50) + 3)));
 const currentQuestionIndex = ref(0);
 const questions = ref([]);
 
@@ -368,27 +452,48 @@ function loadBossFloor() {
   // 遍历区域的塔，找到包含 bossFight 类型的楼层
   const towerIds = region.towers;
   let bossQuestions = [];
-  let bossHp = bossConfig.value.hp || 100;
+  let bossHp = bossConfig.value.hp;
 
-  for (const towerId of towerIds) {
-    const tower = getTowerById(towerId);
-    if (!tower) continue;
+  // 预过滤仅保留已注册的题型，避免将未注册的塔 ID 传入生成器
+  const registeredTypes = getRegisteredTypes();
+  const validTypes = towerIds.filter(t => registeredTypes.includes(t));
 
-    for (const floor of tower.floors) {
-      if (floor.type === 'bossFight') {
-        bossQuestions = floor.questions.map((q, idx) => ({
-          ...q,
-          _index: idx,
-          type: q.type || 'choice'
-        }));
-        bossHp = floor.boss?.hp || bossConfig.value.hp || 100;
-        break;
-      }
-    }
-    if (bossQuestions.length > 0) break;
+  // 优先使用动态题目生成器生成丰富的 BOSS 战题目
+  const generatedQuestions = generateQuestionSet(20, {
+    types: validTypes,
+    level: 3
+  });
+  if (generatedQuestions.length > 0) {
+    bossQuestions = generatedQuestions.map((q, idx) => ({
+      ...q,
+      _index: idx,
+      type: q.type || 'choice',
+      sentence: q.question,
+      ...(q.type === 'bossFight' ? { wrongSentence: q.question } : {})
+    }));
   }
 
-  // 如果找不到 BOSS 战题目，生成默认题目
+  // 如果动态生成失败，回退到静态配置
+  if (bossQuestions.length === 0) {
+    for (const towerId of towerIds) {
+      const tower = getTowerById(towerId);
+      if (!tower) continue;
+
+      for (const floor of tower.floors) {
+        if (floor.type === 'bossFight') {
+          bossQuestions = floor.questions.map((q, idx) => ({
+            ...q,
+            _index: idx,
+            type: q.type || 'choice'
+          }));
+          break;
+        }
+      }
+      if (bossQuestions.length > 0) break;
+    }
+  }
+
+  // 如果仍然找不到 BOSS 战题目，生成默认题目
   if (bossQuestions.length === 0) {
     bossQuestions = generateDefaultQuestions();
   }
@@ -402,24 +507,26 @@ function loadBossFloor() {
 
 function generateDefaultQuestions() {
   const defaults = [
-    {
-      type: 'choice',
-      sentence: '选择正确的选项：',
-      options: ['A', 'B', 'C', 'D'],
-      answer: 'A'
-    },
-    {
-      type: 'choice',
-      sentence: 'Which is correct?',
-      options: ['Option 1', 'Option 2', 'Option 3', 'Option 4'],
-      answer: 'Option 1'
-    },
-    {
-      type: 'choice',
-      sentence: '请选择正确答案：',
-      options: ['正确', '错误', '不知道', '以上都不对'],
-      answer: '正确'
-    }
+    { type: 'choice', sentence: 'I ___ a student.', options: ['am', 'is', 'are', 'be'], answer: 'am', knowledgeId: 'beVerb' },
+    { type: 'choice', sentence: 'She ___ my friend.', options: ['am', 'is', 'are', 'be'], answer: 'is', knowledgeId: 'beVerb' },
+    { type: 'choice', sentence: 'They ___ happy.', options: ['am', 'is', 'are', 'be'], answer: 'are', knowledgeId: 'beVerb' },
+    { type: 'choice', sentence: 'He ___ to school every day.', options: ['go', 'goes', 'going', 'went'], answer: 'goes', knowledgeId: 'presentSimple' },
+    { type: 'choice', sentence: 'She ___ like apples.', options: ["don't", "doesn't", 'isn\'t', "aren't"], answer: "doesn't", knowledgeId: 'presentSimple' },
+    { type: 'choice', sentence: 'Look! The cat ___ sleeping.', options: ['is', 'are', 'am', 'be'], answer: 'is', knowledgeId: 'presentContinuous' },
+    { type: 'choice', sentence: 'They ___ playing football now.', options: ['is', 'are', 'am', 'be'], answer: 'are', knowledgeId: 'presentContinuous' },
+    { type: 'choice', sentence: 'I ___ to the zoo yesterday.', options: ['go', 'goes', 'went', 'going'], answer: 'went', knowledgeId: 'pastTense' },
+    { type: 'choice', sentence: 'She ___ breakfast at 7 o\'clock.', options: ['have', 'has', 'had', 'having'], answer: 'had', knowledgeId: 'pastTense' },
+    { type: 'choice', sentence: 'We ___ visit Beijing next year.', options: ['will', 'are', 'do', 'have'], answer: 'will', knowledgeId: 'futureTense' },
+    { type: 'choice', sentence: 'There ___ a book on the desk.', options: ['is', 'are', 'am', 'be'], answer: 'is', knowledgeId: 'thereBe' },
+    { type: 'choice', sentence: 'There ___ many students in the classroom.', options: ['is', 'are', 'am', 'be'], answer: 'are', knowledgeId: 'thereBe' },
+    { type: 'choice', sentence: '___ you like music?', options: ['Do', 'Does', 'Are', 'Is'], answer: 'Do', knowledgeId: 'questionForm' },
+    { type: 'choice', sentence: '___ she go to school by bus?', options: ['Do', 'Does', 'Is', 'Are'], answer: 'Does', knowledgeId: 'questionForm' },
+    { type: 'choice', sentence: 'This is ___ apple.', options: ['a', 'an', 'the', 'X'], answer: 'an', knowledgeId: 'article' },
+    { type: 'choice', sentence: 'He is ___ tallest boy in class.', options: ['a', 'an', 'the', 'X'], answer: 'the', knowledgeId: 'article' },
+    { type: 'choice', sentence: 'She runs ___.', options: ['quick', 'quickly', 'quicker', 'quickest'], answer: 'quickly', knowledgeId: 'adjAdv' },
+    { type: 'choice', sentence: 'This book is ___ than that one.', options: ['good', 'better', 'best', 'well'], answer: 'better', knowledgeId: 'comparative' },
+    { type: 'choice', sentence: 'I like tea ___ coffee.', options: ['and', 'but', 'or', 'so'], answer: 'and', knowledgeId: 'conjunction' },
+    { type: 'choice', sentence: 'I was tired, ___ I went to bed.', options: ['and', 'but', 'so', 'because'], answer: 'so', knowledgeId: 'conjunction' }
   ];
   return defaults;
 }
@@ -452,7 +559,31 @@ function selectAnswer(answer) {
   const q = currentQuestion.value;
   if (!q) return;
 
-  const isCorrect = String(answer).toLowerCase() === String(q.answer).toLowerCase();
+  // 对于语法题保持大小写敏感（除非题库明确标记 caseInsensitive）
+  const isCorrect = q.caseInsensitive
+    ? String(answer).toLowerCase() === String(q.answer).toLowerCase()
+    : String(answer).trim() === String(q.answer).trim();
+  processAnswer(isCorrect);
+}
+
+/**
+ * 处理特殊题型（categorize, match, imageChoice, verbTable, transform, connector, dialogueChoice, dragOrder）的答案提交
+ * 这些组件通过 @answer 事件发射 { answer } 对象或原始值
+ */
+function handleAnswer(payload) {
+  if (answered.value) return;
+  answered.value = true;
+
+  // 处理两种 emit 格式：原始值（EnglishQuestionRenderer）或 { answer } 对象（其他组件）
+  const answer = payload && typeof payload === 'object' && 'answer' in payload ? payload.answer : payload;
+  selectedAnswer.value = answer;
+
+  const q = currentQuestion.value;
+  if (!q) return;
+
+  const isCorrect = q.caseInsensitive
+    ? String(answer).toLowerCase() === String(q.answer).toLowerCase()
+    : String(answer).trim() === String(q.answer).trim();
   processAnswer(isCorrect);
 }
 
@@ -464,7 +595,10 @@ function submitFill() {
   const q = currentQuestion.value;
   if (!q) return;
 
-  const isCorrect = String(fillInput.value.trim()).toLowerCase() === String(q.answer).toLowerCase();
+  // 对于语法题保持大小写敏感（除非题库明确标记 caseInsensitive）
+  const isCorrect = q.caseInsensitive
+    ? String(fillInput.value.trim()).toLowerCase() === String(q.answer).toLowerCase()
+    : String(fillInput.value.trim()) === String(q.answer).trim();
   processAnswer(isCorrect);
 }
 
@@ -552,15 +686,6 @@ function nextQuestion() {
   answeredCorrectly.value = false;
 }
 
-function shuffleArray(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 // ============ BOSS 击败 ============
 function onBossDefeated() {
   phase.value = 'victory';
@@ -601,9 +726,16 @@ function handleBack() {
 function getTypeLabel(type) {
   const labels = {
     choice: '选择题',
-    bossFight: 'BOSS 战',
-    fillBlank: '填空题'
-    // BOSS 战实际只使用以上题型
+    bossFight: '改错题',
+    fillBlank: '填空题',
+    dragOrder: '排序题',
+    categorize: '分类题',
+    match: '配对题',
+    imageChoice: '看图题',
+    verbTable: '动词变形表',
+    transform: '句式转换题',
+    connector: '连词连接题',
+    dialogueChoice: '情景对话题'
   };
   return labels[type] || type || '未知题型';
 }
@@ -621,7 +753,8 @@ function renderSentence(q) {
   let html = escapeHtml(q.sentence || q.wrongSentence || q.question || '');
   if (q.blanks && q.blanks.length > 0) {
     for (const blank of q.blanks) {
-      html = html.replace(escapeHtml(blank), '<span class="sentence-blank">______</span>');
+      const escapedBlank = escapeHtml(blank);
+      html = html.replace(new RegExp(escapedBlank.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '<span class="sentence-blank">______</span>');
     }
   }
   return html;

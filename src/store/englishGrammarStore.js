@@ -259,7 +259,7 @@ export const useEnglishGrammarStore = defineStore('englishGrammar', {
      */
     _towerIdToKnowledgeType(towerId) {
       const mapping = {
-        'be-verb': 'beVerb',
+        'beVerb': 'beVerb',
         'presentSimple': 'presentSimple',
         'presentContinuous': 'presentContinuous',
         'noun': 'noun',

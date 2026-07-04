@@ -8,7 +8,7 @@ export const englishAdventureConfig = {
       id: 'region_1',
       name: '词法森林',
       icon: '🌳',
-      towers: ['noun', 'pronoun', 'article'],
+      towers: ['noun', 'pronoun', 'article', 'adjAdv'],
       boss: {
         spiritId: 'noun_spirit',
         name: '名词精灵',
@@ -21,7 +21,7 @@ export const englishAdventureConfig = {
       id: 'region_2',
       name: '时态山脉',
       icon: '⛰️',
-      towers: ['be-verb', 'presentSimple', 'presentContinuous', 'futureTense', 'pastTense'],
+      towers: ['beVerb', 'presentSimple', 'presentContinuous', 'futureTense', 'pastTense'],
       boss: {
         spiritId: 'tense_spirit',
         name: '时态精灵',
@@ -34,7 +34,7 @@ export const englishAdventureConfig = {
       id: 'region_3',
       name: '句法城堡',
       icon: '🏰',
-      towers: ['preposition', 'thereBe', 'conjunction', 'basicClause'],
+      towers: ['preposition', 'thereBe', 'conjunction', 'basicClause', 'sentenceStructure'],
       boss: {
         spiritId: 'conjunction_spirit',
         name: '句法精灵',
